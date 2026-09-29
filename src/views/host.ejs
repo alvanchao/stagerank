@@ -1,0 +1,139 @@
+<h1><%= t('floor.title') %></h1>
+<p class="small muted"><%= competition.name %></p>
+<% if (typeof error !== 'undefined' && error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<%# 主持人在一輪開始前的決定：照舊、免賽晉級、直接決賽。只有這個畫面有這三個按鈕。 %>
+<%# The host's decision before a round starts. These three buttons exist only here. %>
+<% if (typeof upcomingRounds !== 'undefined' && upcomingRounds.length > 0) { %>
+  <% upcomingRounds.forEach(function (r) { %>
+    <div class="card">
+      <h2 style="margin-top:0"><%= t('rounds.upcoming') %></h2>
+      <p><strong><%= r.round.division_name %> · <%= r.round.name %></strong></p>
+      <p class="small muted">
+        <%= t('rounds.attendance', { expected: r.expected, present: r.present }) %>
+        <% if (r.advanceCount && !r.isLastRound) { %> · <%= t('rounds.takes', { count: r.advanceCount }) %><% } %>
+        <% if (r.isLastRound) { %> · <%= t('rounds.lastRound') %><% } %>
+      </p>
+
+      <% if (r.suggestion === 'free_pass') { %>
+        <div class="notice"><%= t('rounds.suggestFreePass', { present: r.present, count: r.advanceCount }) %></div>
+      <% } %>
+
+      <%# 最後一輪沒有「取幾人」可言，欄位留著只會被按了拿到錯誤訊息。 %>
+      <%# A last round takes nobody onward; leaving the field there only earns an error. %>
+      <% if (!r.isLastRound) { %>
+        <form method="post" action="/host/<%= competition.id %>/round/<%= r.round.id %>/advance-count"
+              style="display:flex; gap:8px; align-items:center; margin:12px 0">
+          <label for="ac<%= r.round.id %>" style="margin:0"><%= t('rounds.takesLabel') %></label>
+          <input id="ac<%= r.round.id %>" type="text" inputmode="numeric" name="advanceCount"
+                 value="<%= r.advanceCount || '' %>" style="width:70px">
+          <button type="submit" class="ghost small"><%= t('common.save') %></button>
+        </form>
+
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <form method="post" action="/host/<%= competition.id %>/round/<%= r.round.id %>/free-pass">
+            <button type="submit" class="ghost"><%= t('rounds.freePass') %></button>
+          </form>
+          <% if (r.canSkipToFinal && r.finalRound && String(r.finalRound.id) !== String(r.round.id)) { %>
+            <form method="post" action="/host/<%= competition.id %>/round/<%= r.round.id %>/skip-to-final">
+              <button type="submit" class="ghost"><%= t('rounds.skipToFinal') %></button>
+            </form>
+          <% } %>
+        </div>
+        <p class="small muted"><%= t('rounds.decisionHint') %></p>
+      <% } %>
+    </div>
+  <% }); %>
+<% } %>
+
+<div class="card">
+  <h2 style="margin-top:0"><%= t('floor.current') %></h2>
+  <% if (!current) { %>
+    <p class="muted"><%= t('floor.noMoreHeats') %></p>
+  <% } else { %>
+    <p><strong><%= current.heat.label %></strong>
+      <span class="pill <%= current.heat.status === 'scoring' ? 'warn' : '' %>"><%= t('floor.' + current.heat.status) %></span>
+    </p>
+
+    <p class="small muted"><%= t('floor.judgeLights') %>:</p>
+    <p>
+      <% current.judges.forEach(function (j) { %>
+        <span class="pill <%= j.light === 'submitted' ? 'ok' : (j.light === 'voided' ? 'bad' : (j.light === 'ready' ? 'ok' : 'warn')) %>">
+          <%= j.name %>
+        </span>
+      <% }); %>
+    </p>
+
+    <table>
+      <% current.entries.forEach(function (e) { %>
+        <tr>
+          <td style="width:56px"><strong><%= e.bib_number || '—' %></strong></td>
+          <td><%= e.athlete_name %><div class="small muted"><%= e.division_name %></div></td>
+          <td>
+            <% if (e.entry_status === 'absent') { %>
+              <span class="pill bad"><%= t('floor.absent') %></span>
+            <% } else if (e.checked_in_at) { %>
+              <span class="pill ok"><%= t('floor.checkedIn') %></span>
+            <% } else { %>
+              <span class="pill warn"><%= t('floor.notCheckedIn') %></span>
+            <% } %>
+          </td>
+          <td style="width:150px">
+            <% if (!e.checked_in_at && e.entry_status !== 'absent') { %>
+              <form method="post" action="/host/<%= competition.id %>/add/<%= e.heat_entry_id %>" style="display:inline">
+                <button type="submit" class="small"><%= t('floor.addLate') %></button>
+              </form>
+            <% } %>
+            <form method="post" action="/host/<%= competition.id %>/absent/<%= e.round_entry_id %>" style="display:inline">
+              <% if (e.entry_status === 'absent') { %><input type="hidden" name="undo" value="1"><% } %>
+              <button type="submit" class="ghost small"><%= e.entry_status === 'absent' ? t('floor.undoAbsent') : t('floor.markAbsent') %></button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </table>
+
+    <p style="margin-top:16px">
+      <% if (current.heat.status === 'standby') { %>
+        <form method="post" action="/host/<%= competition.id %>/start" style="display:inline">
+          <input type="hidden" name="heatId" value="<%= current.heat.id %>">
+          <button type="submit"><%= t('floor.start') %></button>
+        </form>
+      <% } %>
+      <form method="post" action="/host/<%= competition.id %>/next" style="display:inline">
+        <button type="submit" class="ghost"><%= t('floor.nextHeat') %></button>
+      </form>
+    </p>
+  <% } %>
+</div>
+
+<h2><%= t('floor.upcoming') %></h2>
+<table>
+  <% order.forEach(function (h, i) { %>
+    <tr>
+      <td><%= h.label %><div class="small muted"><%= h.checked_in_count %>／<%= h.entry_count %> <%= t('floor.checkedIn') %></div></td>
+      <td style="width:190px">
+        <% if (i > 0) { %>
+          <form method="post" action="/host/<%= competition.id %>/move/<%= h.id %>" style="display:inline">
+            <input type="hidden" name="beforeHeatId" value="<%= order[0].id %>">
+            <button type="submit" class="ghost small"><%= t('schedule.moveUp') %></button>
+          </form>
+        <% } %>
+        <% if (i < order.length - 1) { %>
+          <form method="post" action="/host/<%= competition.id %>/move/<%= h.id %>" style="display:inline">
+            <input type="hidden" name="afterHeatId" value="<%= order[order.length - 1].id %>">
+            <button type="submit" class="ghost small"><%= t('schedule.moveDown') %></button>
+          </form>
+        <% } %>
+        <% if (!current) { %>
+          <form method="post" action="/host/<%= competition.id %>/next" style="display:inline">
+            <input type="hidden" name="heatId" value="<%= h.id %>">
+            <button type="submit" class="small"><%= t('floor.start') %></button>
+          </form>
+        <% } %>
+      </td>
+    </tr>
+  <% }); %>
+</table>
+<script src="/live.js" data-competition="<%= competition.id %>"></script>

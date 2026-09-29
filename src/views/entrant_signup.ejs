@@ -1,0 +1,28 @@
+<h1><%= t('entrant.signUp') %></h1>
+<p class="small muted"><%= t('entrant.signUpWhy') %></p>
+
+<% if (error) { %><div class="notice bad"><%= t(error, typeof errorParams !== 'undefined' ? errorParams : null) %></div><% } %>
+
+<form class="card" method="post" action="/entrant/signup">
+  <label for="email"><%= t('entrant.email') %></label>
+  <input id="email" type="email" name="email" required maxlength="180" value="<%= form.email || '' %>">
+  <p class="small muted"><%= t('entrant.emailWhy') %></p>
+
+  <label for="password"><%= t('entrant.password') %></label>
+  <input id="password" type="password" name="password" required minlength="8">
+  <p class="small muted"><%= t('entrant.passwordHint') %></p>
+
+  <label for="unitName"><%= t('entrant.unitName') %></label>
+  <input id="unitName" type="text" name="unitName" maxlength="120" value="<%= form.unitName || '' %>">
+
+  <label for="contactName"><%= t('entrant.contactName') %></label>
+  <input id="contactName" type="text" name="contactName" maxlength="120" value="<%= form.contactName || '' %>">
+
+  <label for="phone"><%= t('entrant.phone') %></label>
+  <input id="phone" type="text" name="phone" maxlength="60" value="<%= form.phone || '' %>">
+
+  <input type="hidden" name="next" value="<%= form.next || '' %>">
+  <p style="margin-top:20px"><button type="submit"><%= t('entrant.signUp') %></button></p>
+</form>
+
+<p class="small"><a href="/entrant/login"><%= t('entrant.haveAccount') %></a></p>

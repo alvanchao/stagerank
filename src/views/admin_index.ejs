@@ -1,0 +1,61 @@
+<h1><%= t('admin.title') %></h1>
+<p class="small"><a href="/admin/entrants"><%= t('admin.entrants') %></a></p>
+
+<div class="card">
+  <h2 style="margin-top:0"><%= t('admin.newCompetition') %></h2>
+  <form method="post" action="/admin/new">
+    <label for="cname"><%= t('admin.competitionName') %></label>
+    <input id="cname" type="text" name="name" required maxlength="120">
+
+    <label for="cfee"><%= t('competition.fee') %></label>
+    <input id="cfee" type="text" inputmode="numeric" name="feeCents" value="0">
+    <p class="small muted"><%= t('admin.feeHint') %></p>
+
+    <label for="ccur"><%= t('admin.currency') %></label>
+    <input id="ccur" type="text" name="currency" value="<%= config.currency %>" maxlength="3">
+
+    <label for="cstatus"><%= t('common.status') %></label>
+    <select id="cstatus" name="status">
+      <option value="draft"><%= t('competition.status.draft') %></option>
+      <option value="open"><%= t('competition.status.open') %></option>
+    </select>
+
+    <p style="margin-top:16px"><button type="submit"><%= t('admin.createCompetition') %></button></p>
+  </form>
+</div>
+
+<h2><%= t('admin.competitions') %></h2>
+<table>
+  <tr>
+    <th><%= t('admin.competitions') %></th><th><%= t('common.status') %></th>
+    <th><%= t('competition.registrationCount') %></th><th><%= t('competition.paidCount') %></th><th></th>
+  </tr>
+  <% competitions.forEach(function (c) { %>
+    <tr>
+      <td><%= c.name %><div class="small muted">/<%= c.slug %></div></td>
+      <td><span class="pill <%= c.status === 'open' ? 'ok' : '' %>"><%= t('competition.status.' + c.status) %></span></td>
+      <td><%= c.counts.total %></td>
+      <td><%= c.counts.paid %></td>
+      <td><a class="btn ghost small" href="/admin/c/<%= c.id %>"><%= t('common.actions') %></a></td>
+    </tr>
+  <% }); %>
+</table>
+
+<h2><%= t('admin.settings') %></h2>
+<div class="card">
+  <p class="small muted"><%= t('admin.paymentKeysHint') %></p>
+  <table>
+    <tr><th><%= t('admin.paymentKeys') %></th><th><%= t('common.status') %></th><th><%= t('admin.partnerId') %></th></tr>
+    <% providers.forEach(function (p) { %>
+      <tr>
+        <td><%= t('payment.provider.' + p.provider) %><% if (p.sandbox) { %> <span class="small muted">sandbox</span><% } %></td>
+        <td>
+          <span class="pill <%= (p.enabled && p.configured) ? 'ok' : '' %>">
+            <%= (p.enabled && p.configured) ? t('admin.enabled') : t('admin.disabled') %>
+          </span>
+        </td>
+        <td class="small"><%= p.partnerId ? p.partnerId : t('admin.partnerIdBlank') %></td>
+      </tr>
+    <% }); %>
+  </table>
+</div>

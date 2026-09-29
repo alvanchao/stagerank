@@ -1,0 +1,13 @@
+{
+  "_comment": "StageRank reads this file to find where to send anonymous usage reports. Installed copies follow changes made here, so the endpoint can move without asking anyone to update.",
+  "endpoint": "https://stagerank.example.invalid/usage",
+  "schema": "stagerank.usage.v1",
+  "note": "Not live yet. Until a real endpoint is published here, reports are queued locally and never leave the organiser's server.",
+  "partner_ids": {
+    "_comment": "The partner ids every installed copy carries on its payment requests. Blank until a contract exists with that provider; an organiser can override any of these with the STAGERANK_*_ID environment variables, and their value always wins.",
+    "ecpayPlatformId": "",
+    "newebpayPartnerId": "",
+    "paypalBnCode": "StageRank_Cart_PPCP",
+    "stripePartnerId": ""
+  }
+}

@@ -1,0 +1,182 @@
+<p class="small"><a href="/admin/c/<%= competition.id %>">&larr; <%= competition.name %></a></p>
+<h1><%= t('schedule.title') %></h1>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<% if (!voucher) { %>
+  <div class="notice bad"><%= t('admin.voucherNone') %></div>
+<% } else { %>
+
+<% warnings.forEach(function (w) { %>
+  <div class="notice"><%= t(w.key, w.params) %></div>
+<% }); %>
+
+<h2><%= t('schedule.dances') %></h2>
+<div class="card">
+  <p class="small muted"><% dances.forEach(function (d) { %><span class="pill"><%= d.name %></span> <% }); %></p>
+  <form method="post" action="/admin/c/<%= competition.id %>/dances">
+    <label for="names"><%= t('schedule.dances') %></label>
+    <input id="names" type="text" name="names" placeholder="Cha Cha, Samba, Rumba">
+    <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('common.save') %></button></p>
+  </form>
+</div>
+
+<h2><%= t('schedule.roster') %></h2>
+<div class="card">
+  <form method="post" action="/admin/c/<%= competition.id %>/bibs" style="display:inline">
+    <button type="submit" class="ghost"><%= t('schedule.assignBibs') %></button>
+  </form>
+  <span class="small muted"><%= roster.length %> <%= t('schedule.entries') %></span>
+  <table style="margin-top:12px">
+    <tr><th><%= t('results.bib') %></th><th><%= t('register.athleteName') %></th><th><%= t('register.division') %></th></tr>
+    <% roster.slice(0, 40).forEach(function (r) { %>
+      <tr><td><%= r.bib_number || '—' %></td><td><%= r.athlete_name %></td><td><%= r.division_name %></td></tr>
+    <% }); %>
+  </table>
+</div>
+
+<% detail.forEach(function (block) { %>
+  <h2><%= block.division.name %></h2>
+  <div class="card">
+    <form method="post" action="/admin/c/<%= competition.id %>/division/<%= block.division.id %>/dances">
+      <label><%= t('schedule.dances') %></label>
+      <% dances.forEach(function (d) { %>
+        <label style="display:inline-block;margin-inline-end:12px;font-weight:400">
+          <input type="checkbox" name="danceId" value="<%= d.id %>"
+            <%= block.dances.some(function (x) { return String(x.id) === String(d.id); }) ? 'checked' : '' %>>
+          <%= d.name %>
+        </label>
+      <% }); %>
+      <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('common.save') %></button></p>
+    </form>
+
+    <p class="small muted" style="margin-top:16px"><%= t('judges.assigned') %>:
+      <% block.judges.forEach(function (j) { %><span class="pill"><%= j.name %></span> <% }); %>
+      <% if (block.judges.length === 0) { %><span class="muted"><%= t('common.notSet') %></span><% } %>
+    </p>
+
+    <table>
+      <tr><th><%= t('schedule.round') %></th><th><%= t('schedule.scoringMode') %></th><th><%= t('schedule.advanceCount') %></th><th></th></tr>
+      <% block.rounds.forEach(function (r) { %>
+        <tr>
+          <td><%= r.name %><div class="small muted"><%= t('floor.' + (r.status === 'pending' ? 'pending' : r.status === 'running' ? 'scoring' : 'closed')) %></div></td>
+          <td class="small"><%= t('schedule.scoringMode') %>: <%= r.scoring_mode %>
+            <% if (r.scoring_mode === 'rank') { %><div class="small muted"><%= r.rank_method === 'skating' ? t('schedule.rankSkating') : t('schedule.rankSum') %></div><% } %>
+            <% if (r.scoring_mode === 'mark') { %><div class="small muted"><%= r.mark_quota_mode === 'per_heat' ? t('schedule.markQuotaPerHeat') : t('schedule.markQuotaPerDance') %></div><% } %>
+          </td>
+          <td><%= r.advance_count || '—' %></td>
+          <td>
+            <form method="post" action="/admin/c/<%= competition.id %>/round/<%= r.id %>/seed" style="display:inline">
+              <button type="submit" class="ghost small"><%= t('schedule.seedRound') %></button>
+            </form>
+            <form method="post" action="/admin/c/<%= competition.id %>/round/<%= r.id %>/heats" style="display:inline">
+              <button type="submit" class="ghost small"><%= t('schedule.buildHeats') %></button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </table>
+
+    <form method="post" action="/admin/c/<%= competition.id %>/division/<%= block.division.id %>/round" style="margin-top:16px">
+      <label for="rn-<%= block.division.id %>"><%= t('schedule.round') %></label>
+      <input id="rn-<%= block.division.id %>" type="text" name="name" required placeholder="<%= t('schedule.roundNameExample') %>">
+      <label><%= t('schedule.scoringMode') %></label>
+      <select name="scoringMode">
+        <option value="mark">mark</option>
+        <option value="score">score</option>
+        <option value="rank">rank</option>
+      </select>
+      <label><%= t('schedule.advanceCount') %></label>
+      <input type="text" name="advanceCount" inputmode="numeric">
+      <label><%= t('schedule.heatSize') %></label>
+      <input type="text" name="heatSize" inputmode="numeric" value="10">
+      <label><%= t('schedule.markQuota') %></label>
+      <select name="markQuotaMode">
+        <option value="per_dance"><%= t('schedule.markQuotaPerDance') %></option>
+        <option value="per_heat"><%= t('schedule.markQuotaPerHeat') %></option>
+      </select>
+      <label><%= t('schedule.rankMethod') %></label>
+      <select name="rankMethod">
+        <option value="sum"><%= t('schedule.rankSum') %></option>
+        <option value="skating"><%= t('schedule.rankSkating') %></option>
+      </select>
+      <label><%= t('schedule.scoreMethod') %></label>
+      <select name="scoreMethod">
+        <option value="average"><%= t('schedule.scoreAverage') %></option>
+        <option value="trimmed"><%= t('schedule.scoreTrimmed') %></option>
+      </select>
+      <label><%= t('schedule.tiePolicy') %></label>
+      <select name="tiePolicy">
+        <option value="advance_all"><%= t('schedule.tieAdvanceAll') %></option>
+        <option value="dance_off"><%= t('schedule.tieDanceOff') %></option>
+      </select>
+      <label style="font-weight:400"><input type="checkbox" name="reshufflePerDance" value="1"> <%= t('schedule.reshuffle') %></label>
+      <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('common.save') %></button></p>
+    </form>
+  </div>
+<% }); %>
+
+<h2><%= t('judges.title') %></h2>
+<div class="card">
+  <table>
+    <tr><th><%= t('judges.name') %></th><th><%= t('judges.loginCode') %></th><th><%= t('judges.assigned') %></th></tr>
+    <% judges.forEach(function (j) { %>
+      <tr>
+        <td><%= j.name %></td>
+        <td><code><%= j.login_code %></code></td>
+        <td>
+          <% j.division_names.forEach(function (n) { %><span class="pill"><%= n %></span> <% }); %>
+          <form method="post" action="/admin/c/<%= competition.id %>/judges/<%= j.id %>/assign" style="margin-top:6px">
+            <select name="divisionId">
+              <% detail.forEach(function (b) { %><option value="<%= b.division.id %>"><%= b.division.name %></option><% }); %>
+            </select>
+            <button type="submit" class="ghost small"><%= t('judges.assign') %></button>
+          </form>
+        </td>
+      </tr>
+    <% }); %>
+  </table>
+  <form method="post" action="/admin/c/<%= competition.id %>/judges" style="margin-top:16px">
+    <label for="jn"><%= t('judges.add') %></label>
+    <input id="jn" type="text" name="name" required>
+    <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('judges.add') %></button></p>
+  </form>
+</div>
+
+<h2><%= t('schedule.runningOrder') %></h2>
+<div class="card">
+  <form method="post" action="/admin/c/<%= competition.id %>/order/rebuild" style="display:inline">
+    <button type="submit" class="ghost"><%= t('schedule.rebuild') %></button>
+  </form>
+  <form method="post" action="/admin/c/<%= competition.id %>/merge" style="margin-top:12px">
+    <table>
+      <tr><th></th><th><%= t('schedule.heat') %></th><th><%= t('schedule.entries') %></th><th><%= t('common.status') %></th></tr>
+      <% order.forEach(function (h) { %>
+        <tr>
+          <td style="width:32px">
+            <% if (h.status === 'pending') { %><input type="checkbox" name="heatId" value="<%= h.id %>"><% } %>
+          </td>
+          <td><%= h.label %></td>
+          <td><%= h.entry_count %></td>
+          <td>
+            <span class="pill"><%= t('floor.' + h.status) %></span>
+            <% if (h.merged_from && h.merged_from.length > 0) { %>
+              <a class="small" href="#" onclick="document.getElementById('unmerge-<%= h.id %>').submit();return false"><%= t('schedule.unmerge') %></a>
+            <% } %>
+          </td>
+        </tr>
+      <% }); %>
+    </table>
+    <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('schedule.merge') %></button></p>
+  </form>
+  <% order.forEach(function (h) { if (h.merged_from && h.merged_from.length > 0) { %>
+    <form id="unmerge-<%= h.id %>" method="post" action="/admin/c/<%= competition.id %>/unmerge/<%= h.id %>"></form>
+  <% } }); %>
+</div>
+
+<p>
+  <a class="btn ghost" href="/host/<%= competition.id %>"><%= t('floor.title') %></a>
+  <a class="btn ghost" href="/checkin/<%= competition.id %>"><%= t('floor.checkinTitle') %></a>
+  <a class="btn ghost" href="/desk/<%= competition.id %>"><%= t('floor.reportTitle') %></a>
+  <a class="btn ghost" href="/admin/c/<%= competition.id %>/results"><%= t('results.title') %></a>
+</p>
+<% } %>

@@ -1,0 +1,34 @@
+# 一行指令就能跑起來：docker compose up -d
+# One command to run it: docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-stagerank}
+      POSTGRES_USER: stagerank
+      POSTGRES_DB: stagerank
+    volumes:
+      - stagerank-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stagerank"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://stagerank:${DB_PASSWORD:-stagerank}@db:5432/stagerank
+      PORT: 3000
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-3000}:3000"
+
+volumes:
+  stagerank-db:

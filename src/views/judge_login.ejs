@@ -1,0 +1,7 @@
+<h1><%= t('judges.title') %></h1>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+<form class="card" method="post" action="/judge/login">
+  <label for="code"><%= t('judges.loginPrompt') %></label>
+  <input id="code" type="text" name="code" autocomplete="off" autocapitalize="characters" required>
+  <p style="margin-top:16px"><button type="submit"><%= t('common.confirm') %></button></p>
+</form>

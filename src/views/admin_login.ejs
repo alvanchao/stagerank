@@ -1,0 +1,11 @@
+<h1><%= t('admin.title') %></h1>
+<% if (!hasToken) { %>
+  <div class="notice bad"><%= t('admin.tokenMissing') %></div>
+<% } else { %>
+  <% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+  <form class="card" method="post" action="/admin/login">
+    <label for="token"><%= t('admin.tokenPrompt') %></label>
+    <input id="token" type="text" name="token" autocomplete="off" required>
+    <p style="margin-top:16px"><button type="submit"><%= t('common.confirm') %></button></p>
+  </form>
+<% } %>

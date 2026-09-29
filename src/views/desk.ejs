@@ -1,0 +1,33 @@
+<h1><%= t('floor.reportTitle') %></h1>
+<p class="small muted"><%= competition.name %> · <%= t('floor.reported') %>: <%= reported %>／<%= total %></p>
+
+<% if (!voucher) { %>
+  <div class="notice bad"><%= t('admin.voucherNone') %></div>
+<% } else { %>
+  <form class="card" method="get">
+    <label for="q"><%= t('results.enterBib') %></label>
+    <input id="q" type="text" name="q" value="<%= search %>" inputmode="search" autocomplete="off">
+    <p style="margin-top:12px"><button type="submit"><%= t('common.submit') %></button></p>
+  </form>
+
+  <table>
+    <tr><th><%= t('results.bib') %></th><th><%= t('register.athleteName') %></th><th><%= t('common.status') %></th></tr>
+    <% roster.forEach(function (r) { %>
+      <tr class="<%= r.reported_at ? '' : 'dim' %>">
+        <td><strong><%= r.bib_number || '—' %></strong></td>
+        <td><%= r.athlete_name %><div class="small muted"><%= r.division_name %><% if (r.unit_name) { %> · <%= r.unit_name %><% } %></div></td>
+        <td>
+          <form method="post" action="/desk/<%= competition.id %>/report/<%= r.registration_id %>">
+            <input type="hidden" name="q" value="<%= search %>">
+            <% if (r.reported_at) { %>
+              <input type="hidden" name="undo" value="1">
+              <button type="submit" class="ghost small"><span class="pill ok"><%= t('floor.reported') %></span></button>
+            <% } else { %>
+              <button type="submit" class="small"><%= t('floor.reportTitle') %></button>
+            <% } %>
+          </form>
+        </td>
+      </tr>
+    <% }); %>
+  </table>
+<% } %>

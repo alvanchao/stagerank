@@ -1,0 +1,201 @@
+# StageRank
+
+Free, open-source competition management: online registration, payments, running order, heats, check-in, floor control, judging and results. Built for dance competitions, usable for anything judged in heats.
+
+免費、原始碼公開的比賽管理系統：線上報名、金流、秩序表、分批、報到檢錄、主持人控場、裁判評分、成績公告。為舞蹈比賽而做，任何分批評分的比賽都能用。
+
+MIT licensed. You owe the author nothing. There is one request, near the bottom of this page.
+
+![The host's floor-control board](docs/shots/15-host-standby.png)
+
+---
+
+## What it does
+
+**Before the competition**
+
+- Entrants — a studio, a teacher, a parent — hold an account and a roster. The roster is built once, with a name and a date of birth per person, and reused for every competition after that: entering is then a matter of ticking names. Only the account holder needs an email address; the competitors need none, which matters when most of them are children.
+- Online registration with entry fees per competition or per division.
+- A division is solo, couple or team, set by a member range: 1–1, 2–2, 3–24, or a fixed 3–3 for a division that takes threes only. One entry is one bib whatever its size, so nothing downstream changes.
+- Four ways to charge. A flat fee for the whole entry; a fee per person; a surcharge (or a discount, with a negative number) for somebody entering a second division; or a **fee plan** — "1800 covers two items, then 600 each" — which is how most ballroom competitions actually price. One division counts as one item, so the organiser's own division split is what the money follows.
+- A fee plan is counted per person and per plan. Pro-am has become common and must not be counted together with the ordinary divisions, so it gets a plan of its own: two general items already entered do not make the first pro-am item cheaper, and the reverse holds too. An organiser can add as many plans as the event needs without touching code.
+- The entry screen prices each competitor on their own line as the name is ticked — "item 3 · 600" — so nobody submits and then argues about the total. Which item number each member was on, and what they paid, is stored with the entry, so the books can be checked afterwards.
+- The repeat is recognised by the roster entry, never by name — two countries will always have two people with the same one.
+- The entry form refuses to submit until the right number of people is ticked.
+- Age limits per division are two separate bounds, both optional, which is what makes the usual convention work by itself: a 13-year-old can enter U13, U15 and U18 — those set only an upper bound — and is refused by U11. Adult divisions set only a lower bound. A pro-am division leaves both blank, since the teacher's age is not the point. Limits are checked against the roster's dates of birth: anyone outside them cannot be ticked and is told why on the spot. How age is counted is the organiser's choice — the age on 31 December of the competition's year, which keeps everyone born in the same year together, or the actual age on the day — because the convention differs by country.
+- Payments through ECPay, NewebPay, PayPal or Stripe — the organiser's own keys, so the money goes straight to the organiser.
+- Building the divisions starts with one question: is this the same event you have run before? If it is, the whole setup — dances, fee plans, divisions, and each division's dance list — copies across from the earlier competition in one press, and only the date is new. Entries and results stay behind where they belong.
+- A first-time organiser starts from the built-in ballroom template instead. It generates the divisions already wired to their dances, with everything switched on, and the organiser switches off what they are not running. Removing from a list is far less work than ticking items out of an empty grid, and it also shows them what they could be running. Three-dance events are deliberately not offered, because which three dances they are differs by region, and guessing wrong is worse than leaving it out. Dance names follow the interface language, so a Chinese running order says 恰恰 rather than Cha Cha.
+- Nothing is final until somebody enters: while the entry list is empty the whole setup can be cleared and rebuilt. Once the first entry arrives it locks, because moving divisions at that point makes the roster stop adding up.
+- Closing registration issues a **competition voucher code**. Everything after that point requires it.
+- Bibs, divisions, dances and rounds; heats split evenly; small divisions merged onto one floor.
+- Judges assigned per division. Warnings for unassigned divisions and even-sized panels on the skating system.
+
+**On the day**
+
+- A check-in desk marks who has arrived; anyone who never reported in is greyed out for the marshal.
+- The marshal sees the next few heats, checks competitors in, and reports a heat ready.
+- The host runs the floor: change over, countdown, auto-collect, start, reorder, merge, mark absent, and add a latecomer mid-heat.
+- Before a round starts the host sees how many were expected and how many actually turned up, and decides: carry on as planned, change how many go through, pass everyone to the next round without dancing it, or skip straight to the final. The decision is the host's alone — on the day there is no time to consult anyone — and it is refused once that round has started scoring.
+- Judges see only the current heat, and only the divisions they were assigned to. A waiting notice tells them how many heats until their next one.
+- Leaving the screen while scoring voids that judge for that heat only. Standby, waiting and submitting are all fine.
+- Everything syncs live to every phone in the room.
+
+**Scoring and results**
+
+- Three modes per round, chosen by the organiser: marks (crosses), points, or places.
+- Marks add up across every dance and judge; the quota is the whole dance by default, or fixed per heat.
+- Points average, with an optional trim of the highest and lowest.
+- Places by rank sum, or by the **skating system** (majority, then count, then sum).
+- Results are private until the organiser publishes them. Competitors look themselves up by bib.
+
+**Everywhere**
+
+- Traditional Chinese and English built in; adding a language is one file.
+- Dates, times and money follow the locale and the currency.
+
+## Install
+
+### Docker (one command)
+
+```bash
+git clone https://github.com/alvanchao/stagerank.git
+cd stagerank
+cp .env.example .env     # fill in SITE_NAME, ADMIN_TOKEN and your payment keys
+docker compose up -d
+```
+
+Open `http://localhost:3000`. The database schema is created on first boot.
+
+### Railway (one account, no terminal)
+
+1. Create a Railway project and add a **PostgreSQL** service.
+2. Add a service from this GitHub repository.
+3. In the app service's variables, set `DATABASE_URL` to the Postgres service's connection string, plus `SITE_NAME`, `BASE_URL`, `ADMIN_TOKEN` and your payment keys.
+4. Deploy. Railway builds the Dockerfile and the schema is created on boot.
+
+Roughly US$5 a month at the time of writing. Check Railway's current pricing.
+
+### Vercel + Supabase (free to start)
+
+1. Create a Supabase project and copy its Postgres connection string.
+2. Import this repository into Vercel.
+3. Set `DATABASE_URL` (the Supabase string), `DATABASE_SSL=true`, `SITE_NAME`, `BASE_URL`, `ADMIN_TOKEN` and your payment keys.
+4. Deploy.
+
+Two things to know before a real competition on the free tier: a Supabase project that has been idle is paused and needs waking up beforehand, and Vercel's Hobby plan has non-commercial terms that a paid competition may not fit. Check both before the day.
+
+### Node and Postgres by hand
+
+```bash
+npm install
+cp .env.example .env
+npm run migrate
+npm run seed     # optional demo competition
+npm start
+```
+
+## Configuration
+
+Everything is environment variables — see [`.env.example`](.env.example). Two things every organiser sets:
+
+- `SITE_NAME` — your competition's name, shown in the header.
+- Your own payment keys. **Keys are read from the environment only.** They are never written to the database and never appear in the source.
+
+A payment provider stays hidden on the registration form until it is both enabled and fully keyed.
+
+## The day, screen by screen
+
+| Who | Where | Passcode |
+| --- | --- | --- |
+| Organiser | `/admin` | `ADMIN_TOKEN` |
+| Check-in desk | `/desk` | `ADMIN_TOKEN` |
+| Marshal | `/checkin` | `ADMIN_TOKEN` |
+| Host | `/host` | `ADMIN_TOKEN` |
+| Entrant (studio or parent) | `/entrant` | their own email and password |
+| Judge | `/judge` | their own login code |
+| Competitors and public | `/results` | none |
+
+Staff screens are built to be added to a phone's home screen and run full-screen.
+
+A judge's login code is generated by the organiser and can be handed out on the day, so a stand-in judge needs no account set up in advance.
+
+A forgotten entrant password is handled face to face: the organiser issues a temporary one from `/admin/entrants`, and the entrant must choose their own at the next sign-in. There is deliberately no "email me a reset link", because a self-hosted site may have no mail service at all, and a competition that cannot send mail should still be able to take entries.
+
+## Adding your language
+
+1. Copy `src/locales/en.json` to `src/locales/<your-code>.json`.
+2. Translate the values. Leave the keys alone.
+3. Restart. Your language appears in the picker automatically.
+
+Every visible string lives in those files; a test fails the build if any is hard-coded. Pull requests with new translations are very welcome.
+
+## How the competition voucher code works
+
+Registration is the only place money changes hands. When the organiser closes registration, the payment module settles every confirmed entry into one roster and issues a **competition voucher code** — globally unique and unguessable. Bibs, running order, floor control, judging and results all check that code before they will run, and read competitors from the roster it is bound to.
+
+Three payment sources produce an identical voucher, so the rest of the system behaves the same either way: online payment, a free competition (fee set to 0), and cash or bank transfer marked by the organiser.
+
+After a late entry, a withdrawal or a refund, **re-settle** issues a new code and revokes the old one immediately. Once judging has started, re-settling is refused so the roster cannot move mid-competition.
+
+## The anti-cheating rule, and its limits
+
+While a heat is being scored, a judge who leaves the screen has their scoring for **that heat** voided; the next heat starts clean. Standby, waiting between heats, and the moment after submitting are all exempt, and so is a refresh the system itself triggers.
+
+What this cannot do: a web app cannot silence LINE, incoming calls or other notifications. That is an iPhone and Android limitation, not a choice. Instead the judge is asked to turn on Do Not Disturb before the round, and a notification only matters if the judge taps it and leaves the screen.
+
+## The one request
+
+StageRank is free. You do not pay the author, and you never will.
+
+The only request is that you keep two things in place:
+
+1. **The "Powered by StageRank" footer**, which is how other organisers find the project.
+2. **The partner IDs** sent to the payment providers, which is how the author can show those providers how much business this software brings them.
+
+Neither costs you anything. Neither affects your money — payments go straight to your own account through your own keys. Both are on by default and can be switched off in `.env`.
+
+**Where the partner IDs come from.** They are not printed into the code. Once a day your installation reads [`telemetry.json`](telemetry.json) from this repository and takes the `partner_ids` it finds there. That is deliberate: the day the author signs with a provider and receives a platform id, one edit to that file reaches every installed copy the next day, without anyone updating anything — and this project does no automatic updates. Three rules keep it harmless. If the file cannot be reached, the ids stay blank, exactly as if the feature did not exist. A badly formed value is ignored and the transaction proceeds. And anything you set yourself in `.env` always wins over the file. `STAGERANK_REMOTE_PARTNER_IDS=false` stops the lookup altogether.
+
+**This is a request, not a legal obligation.** The MIT licence does not require it, and removing them is not unlawful. We simply hope you leave them alone, because they are what keeps this project maintained.
+
+## What we send back
+
+If `STAGERANK_REPORT_USAGE` is on (the default), a report is queued when a competition is settled, containing:
+
+- your site URL and name,
+- per-provider payment counts and totals, and whether the partner IDs were intact,
+- the number of competitors in the settled roster.
+
+It contains **no competitor data of any kind** — not names, not emails, not even the competition's name — and **no keys**. Set `STAGERANK_REPORT_USAGE=false` to send nothing at all. A failed report never affects a competition in progress.
+
+The endpoint is not hard-coded: it is read from [`telemetry.json`](telemetry.json) in this repository, so it can move without anyone having to update their install.
+
+## Your competitors' data is yours
+
+StageRank is self-hosted. Competitor names, emails, scores and payment records live in your database, on your server, under your control — and under your responsibility for whatever data protection law applies to you. The authors never see them.
+
+## Development
+
+```bash
+npm test          # the whole suite
+npm run test:unit # everything except the browser tests
+npm run demo      # drives a whole competition through a real browser and writes docs/shots
+```
+
+Tests need a Postgres at `TEST_DATABASE_URL` (default `postgres://postgres:devpass@127.0.0.1:5432/stagerank_test`). The browser tests skip themselves if no Chromium is installed; `npx playwright install chromium` provides one.
+
+## What still needs a real-world check
+
+Honest list, so nobody is surprised:
+
+- The payment adapters have not yet been run against the providers' sandboxes end to end. The request building and signature checking are unit-tested, but only a sandbox run proves a provider accepts them.
+- ECPay's and NewebPay's platform/partner fields are deliberately left blank, because sending one without a contract can fail the transaction. NewebPay's official manual could not be obtained; whether MPG has a vendor attribution field at all is unconfirmed.
+- The skating system implements the majority rules (majority, count, sum, then the next place) and combines dances by rank sum. Federations differ in the later tie-breaks; check it against your own rulebook before using it for a titled event.
+- The Docker image has not been built on a machine with access to Docker Hub.
+- The same person entered by two different studios counts as two people, so a cross-division surcharge is not charged across accounts. This is deliberate: matching them would mean guessing, and an organiser cannot reliably tell two same-named competitors apart either.
+- There is no bulk import of a roster yet. Names are typed one after another, which for a class of twenty takes a few minutes and happens once. An import would need far more validation than it saves, so it waits until somebody actually asks.
+
+## Licence
+
+[MIT](LICENSE).

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= title ? title + ' · ' : '' %><%= config.siteName %></title>
+<!-- StageRank: https://github.com/alvanchao/stagerank -->
+<meta name="generator" content="StageRank 0.1.0">
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1d1c1a; --muted: #6b6963; --line: #e3e1dc;
+    --card: #ffffff; --accent: #8a5a2b; --ok: #2f6b45; --warn: #9a5b12; --bad: #9c3626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17161a; --fg: #eceae5; --muted: #a09d96; --line: #322f38;
+            --card: #201e25; --accent: #d9a066; --ok: #6cc08b; --warn: #e0a75e; --bad: #e08b7a; }
+  }
+  * { box-sizing: border-box; }
+  /* button 有自己的 display，會蓋掉瀏覽器內建的 [hidden]，所以這裡補一條。 */
+  /* A button carries its own display, which beats the browser's own [hidden] rule. */
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Noto Sans TC", sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
+  header.site { border-bottom: 1px solid var(--line); }
+  header.site .wrap { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header.site a.brand { font-weight: 650; text-decoration: none; color: var(--fg); font-size: 18px; }
+  header.site .tagline { color: var(--muted); font-size: 13px; }
+  header.site nav { margin-inline-start: auto; display: flex; gap: 12px; align-items: center; }
+  header.site nav a, header.site nav select { font-size: 14px; color: var(--muted); }
+  h1 { font-size: 24px; margin: 20px 0 8px; }
+  h2 { font-size: 18px; margin: 24px 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  label { display: block; margin: 12px 0 4px; font-size: 14px; font-weight: 600; }
+  input, select, button { font: inherit; }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=tel], select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--bg); color: var(--fg);
+  }
+  button, .btn {
+    display: inline-block; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--accent); color: #fff; cursor: pointer; text-decoration: none; font-weight: 600;
+  }
+  button.ghost, .btn.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: start; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); }
+  .pill.ok { color: var(--ok); border-color: var(--ok); }
+  .pill.warn { color: var(--warn); border-color: var(--warn); }
+  .pill.bad { color: var(--bad); border-color: var(--bad); }
+  .notice { border-inline-start: 3px solid var(--accent); padding: 8px 12px; background: var(--card); border-radius: 0 8px 8px 0; }
+  .notice.bad { border-color: var(--bad); }
+  code.voucher { font-size: 18px; letter-spacing: .06em; word-break: break-all; }
+  .division-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;
+                  border-bottom: 1px solid var(--line); padding: 10px 0; }
+  .division-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; flex: 1 1 auto; }
+  .division-form .field { display: flex; flex-direction: column; }
+  .division-form .field.grow { flex: 1 1 180px; min-width: 160px; }
+  .division-form label { margin: 0 0 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .division-delete { align-self: flex-end; }
+  .member-row { border-inline-start: 2px solid var(--line); padding-inline-start: 10px; margin-top: 8px; }
+  .roster-pick { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-weight: 400;
+                 border-bottom: 1px solid var(--line); padding: 10px 2px; margin: 0; cursor: pointer; }
+  .roster-pick input[type=checkbox] { width: 20px; height: 20px; margin: 0; flex: none; }
+  .roster-pick .roster-name { font-weight: 600; }
+  .roster-pick.disabled { opacity: .55; cursor: not-allowed; }
+  .bad { color: var(--bad); }
+  footer.site { border-top: 1px solid var(--line); margin-top: 32px; }
+  footer.site .wrap { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; font-size: 13px; color: var(--muted); }
+  footer.site a { color: var(--muted); }
+</style>
+</head>
+<body data-stagerank="0.1.0">
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="/"><%= config.siteName %></a>
+    <span class="tagline"><%= t('common.siteTagline') %></span>
+    <nav>
+      <a href="/"><%= t('nav.home') %></a>
+      <a href="/entrant"><%= t('nav.entrant') %></a>
+      <a href="/admin"><%= t('nav.admin') %></a>
+      <form method="get" style="display:inline">
+        <select name="lang" onchange="this.form.submit()" aria-label="<%= t('common.language') %>">
+          <% locales.forEach(function (l) { %>
+            <option value="<%= l.code %>" <%= l.code === locale ? 'selected' : '' %>><%= l.name %></option>
+          <% }); %>
+        </select>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<%- body %>
+</main>
+
+<% if (config.attribution.showFooter) { %>
+<footer class="site">
+  <div class="wrap">
+    <!-- 請求保留：這段頁尾標示是我們唯一的請求，不是法律義務。 -->
+    <!-- A request, not an obligation: please keep this credit. -->
+    <span><a href="<%= config.attribution.projectUrl %>" rel="noopener">StageRank</a></span>
+    <span><%= t('common.poweredBy') %></span>
+    <span class="small"><%= t('common.poweredByNote') %></span>
+  </div>
+</footer>
+<% } %>
+</body>
+</html>

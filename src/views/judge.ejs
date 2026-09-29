@@ -1,0 +1,84 @@
+<h1><%= judge.name %></h1>
+<p class="small muted"><%= competition.name %></p>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<% if (!heat) { %>
+  <div class="card">
+    <p class="muted"><%= t('floor.noMoreHeats') %></p>
+  </div>
+<% } else if (!mine) { %>
+  <div class="card">
+    <p><strong><%= t('judges.notNeeded') %></strong></p>
+    <% if (waiting.hasNext) { %>
+      <p class="small muted">
+        <%= t('judges.heatsAway', { count: waiting.heatsAway }) %>
+        · <%= t('judges.minutesAway', { minutes: Math.max(1, Math.round(waiting.secondsAway / 60)) }) %>
+        · <%= waiting.next.divisions %> / <%= waiting.next.danceName %>
+      </p>
+      <p class="small muted"><%= t('judges.estimateNote') %></p>
+    <% } %>
+  </div>
+<% } else if (state && state.voided_at) { %>
+  <div class="notice bad"><%= t('judges.voided') %></div>
+<% } else if (heat.status === 'standby') { %>
+  <div class="card">
+    <h2 style="margin-top:0"><%= heat.label %></h2>
+    <p class="small muted"><%= t('floor.dndCheck') %></p>
+    <table>
+      <% entries.forEach(function (e) { %>
+        <tr><td style="width:56px"><strong><%= e.bib_number || '—' %></strong></td><td><%= e.athlete_name %></td></tr>
+      <% }); %>
+    </table>
+    <% if (state && state.ready_at) { %>
+      <p><span class="pill ok"><%= t('judges.ready') %></span></p>
+    <% } else { %>
+      <form method="post" action="/judge/<%= competition.id %>/ready" style="margin-top:12px">
+        <input type="hidden" name="heatId" value="<%= heat.id %>">
+        <button type="submit"><%= t('judges.ready') %></button>
+      </form>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="card" id="scoring" data-heat="<%= heat.id %>" data-competition="<%= competition.id %>">
+    <h2 style="margin-top:0"><%= heat.label %></h2>
+    <% if (quota && quota.limit) { %>
+      <p class="small muted" id="quota" data-limit="<%= quota.limit %>"><%= t('judges.markHint', { used: quota.used, limit: quota.limit }) %></p>
+    <% } %>
+
+    <form method="post" action="/judge/<%= competition.id %>/submit">
+      <input type="hidden" name="heatId" value="<%= heat.id %>">
+      <table>
+        <% entries.forEach(function (e) {
+             var round = rounds.find(function (r) { return String(r.id) === String(e.round_id); }) || {}; %>
+          <tr>
+            <td style="width:56px"><strong><%= e.bib_number || '—' %></strong></td>
+            <td>
+              <%= e.athlete_name %>
+              <div class="small muted"><%= e.division_name %></div>
+            </td>
+            <td style="width:140px">
+              <% if (round.scoring_mode === 'mark') { %>
+                <label style="margin:0"><input class="markbox" type="checkbox" name="mark" value="<%= e.round_entry_id %>"
+                  <%= e.existing && e.existing.marked ? 'checked' : '' %>> <%= t('judges.markThis') %></label>
+              <% } else if (round.scoring_mode === 'score') { %>
+                <input type="text" inputmode="decimal" name="points_<%= e.round_entry_id %>"
+                       value="<%= e.existing && e.existing.points !== null ? e.existing.points : '' %>">
+              <% } else { %>
+                <input type="text" inputmode="numeric" name="rank_<%= e.round_entry_id %>"
+                       value="<%= e.existing && e.existing.rank_position !== null ? e.existing.rank_position : '' %>">
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </table>
+      <p style="margin-top:16px">
+        <button type="submit"><%= t('judges.submit') %></button>
+        <% if (state && state.submitted_at) { %><span class="pill ok"><%= t('judges.submitted') %></span><% } %>
+      </p>
+    </form>
+  </div>
+<% } %>
+
+<p class="small"><form method="post" action="/judge/logout"><button class="ghost small" type="submit"><%= t('common.back') %></button></form></p>
+<script src="/live.js" data-competition="<%= competition.id %>"></script>
+<script src="/judge.js"></script>

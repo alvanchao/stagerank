@@ -1,0 +1,290 @@
+<p class="small"><a href="/admin">&larr; <%= t('admin.title') %></a></p>
+<h1><%= competition.name %></h1>
+<p class="small muted">
+  <span class="pill <%= competition.status === 'open' ? 'ok' : '' %>"><%= t('competition.status.' + competition.status) %></span>
+  · <%= t('competition.registrationCount') %>: <%= counts.total %>
+  · <%= t('competition.paidCount') %>: <%= counts.paid %>
+  · <%= money(counts.paid_cents, competition.currency) %>
+</p>
+
+<% if (message) { %><div class="notice"><%= t(message) %></div><% } %>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<h2><%= t('admin.status') %></h2>
+<div class="card">
+  <form method="post" action="/admin/c/<%= competition.id %>/status">
+    <select name="status">
+      <% ['draft','open','closed'].forEach(function (s) { %>
+        <option value="<%= s %>" <%= competition.status === s ? 'selected' : '' %>><%= t('competition.status.' + s) %></option>
+      <% }); %>
+    </select>
+    <button type="submit" class="ghost"><%= t('common.save') %></button>
+  </form>
+</div>
+
+<h2><%= t('admin.ageBasis') %></h2>
+<div class="card">
+  <form method="post" action="/admin/c/<%= competition.id %>/age-rule">
+    <label for="eventDate"><%= t('competition.eventDate') %></label>
+    <input id="eventDate" type="date" name="eventDate"
+           value="<%= ymd(competition.event_date) %>">
+    <p class="small muted"><%= t('admin.eventDateHint') %></p>
+
+    <label for="ageBasis"><%= t('admin.ageBasis') %></label>
+    <select id="ageBasis" name="ageBasis">
+      <option value="year_end" <%= competition.age_basis === 'year_end' ? 'selected' : '' %>><%= t('admin.ageBasisYearEnd') %></option>
+      <option value="event_day" <%= competition.age_basis === 'event_day' ? 'selected' : '' %>><%= t('admin.ageBasisEventDay') %></option>
+    </select>
+    <p class="small muted"><%= t('admin.ageBasisHint') %></p>
+
+    <p style="margin-top:16px"><button type="submit" class="ghost"><%= t('common.save') %></button></p>
+  </form>
+</div>
+
+<%# 一項一項建太慢，所以第一件事是問「跟以前一樣嗎」。 %>
+<%# Building one at a time is slow, so the first question is "same as before?". %>
+<div class="card">
+  <p style="margin:0"><a class="btn" href="/admin/c/<%= competition.id %>/setup"><%= t('setup.title') %></a></p>
+  <p class="small muted" style="margin-bottom:0"><%= t('setup.firstTimeHint') %></p>
+</div>
+
+<h2><%= t('admin.feeGroups') %></h2>
+<div class="card">
+  <p class="small muted"><%= t('admin.feeGroupsHint') %></p>
+
+  <% feeGroups.forEach(function (g) { %>
+    <div class="division-row">
+      <form method="post" action="/admin/c/<%= competition.id %>/fee-groups/<%= g.id %>" class="division-form">
+        <div class="field grow">
+          <label for="gn<%= g.id %>"><%= t('admin.feeGroupName') %></label>
+          <input id="gn<%= g.id %>" type="text" name="name" value="<%= g.name %>" maxlength="120">
+        </div>
+        <div class="field">
+          <label for="gb<%= g.id %>"><%= t('admin.baseFee') %></label>
+          <input id="gb<%= g.id %>" type="text" inputmode="numeric" name="baseFeeCents" style="width:96px"
+                 value="<%= g.base_fee_cents %>">
+        </div>
+        <div class="field">
+          <label for="gi<%= g.id %>"><%= t('admin.baseIncludes') %></label>
+          <input id="gi<%= g.id %>" type="text" inputmode="numeric" name="baseIncludes" style="width:72px"
+                 value="<%= g.base_includes %>">
+        </div>
+        <div class="field">
+          <label for="ge<%= g.id %>"><%= t('admin.extraItemFee') %></label>
+          <input id="ge<%= g.id %>" type="text" inputmode="numeric" name="extraItemFeeCents" style="width:96px"
+                 value="<%= g.extra_item_fee_cents %>">
+        </div>
+        <div class="field"><button type="submit" class="ghost small"><%= t('common.save') %></button></div>
+      </form>
+      <form method="post" action="/admin/c/<%= competition.id %>/fee-groups/<%= g.id %>/delete" class="division-delete">
+        <button type="submit" class="ghost small"><%= t('common.delete') %></button>
+      </form>
+    </div>
+    <%# 設好之後用一句人話覆述，主辦一看就知道自己設了什麼。 %>
+    <%# The rule is read back in one plain sentence, so the organiser can see what they set. %>
+    <p class="small muted" style="margin:4px 0 12px">
+      <%= t('admin.feeGroupSummary', {
+            base: money(g.base_fee_cents, competition.currency),
+            includes: g.base_includes,
+            next: g.base_includes + 1,
+            extra: money(g.extra_item_fee_cents, competition.currency),
+          }) %>
+    </p>
+  <% }); %>
+  <% if (feeGroups.length === 0) { %><p class="muted"><%= t('admin.noFeeGroups') %></p><% } %>
+
+  <form method="post" action="/admin/c/<%= competition.id %>/fee-groups" style="margin-top:16px">
+    <h3 style="font-size:15px"><%= t('admin.addFeeGroup') %></h3>
+    <label for="gname"><%= t('admin.feeGroupName') %></label>
+    <input id="gname" type="text" name="name" required maxlength="120" placeholder="<%= t('admin.feeGroupPlaceholder') %>">
+
+    <label for="gbase"><%= t('admin.baseFee') %></label>
+    <input id="gbase" type="text" inputmode="numeric" name="baseFeeCents" value="0">
+
+    <label for="ginc"><%= t('admin.baseIncludes') %></label>
+    <input id="ginc" type="text" inputmode="numeric" name="baseIncludes" value="1">
+
+    <label for="gext"><%= t('admin.extraItemFee') %></label>
+    <input id="gext" type="text" inputmode="numeric" name="extraItemFeeCents" value="0">
+    <p class="small muted"><%= t('admin.feeGroupAddHint') %></p>
+
+    <p style="margin-top:16px"><button type="submit"><%= t('admin.addFeeGroup') %></button></p>
+  </form>
+</div>
+
+<h2><%= t('competition.divisions') %></h2>
+<div class="card">
+  <p class="small muted"><%= t('admin.divisionHint') %></p>
+  <%# 每個組別一張獨立的表單。不可以把 <form> 直接塞進 <tr>：HTML 不允許，
+      瀏覽器會把表單搬出表格，欄位就不會跟著送出，按「儲存」等於把組別清空。 %>
+  <%# One standalone form per division. A <form> must never sit directly inside a <tr>:
+      HTML forbids it, the browser lifts the form out of the table, the fields are left
+      behind, and pressing save would blank the division. %>
+  <% divisions.forEach(function (d) { %>
+    <div class="division-row">
+      <form method="post" action="/admin/c/<%= competition.id %>/divisions/<%= d.id %>" class="division-form">
+        <div class="field grow">
+          <label for="dn<%= d.id %>"><%= t('admin.divisionName') %></label>
+          <input id="dn<%= d.id %>" type="text" name="name" value="<%= d.name %>" maxlength="120">
+        </div>
+        <div class="field">
+          <label><%= t('admin.members') %></label>
+          <div style="display:flex; gap:6px; align-items:center">
+            <input type="text" inputmode="numeric" name="memberMin" value="<%= d.member_min %>" style="width:56px" aria-label="min">
+            <span>–</span>
+            <input type="text" inputmode="numeric" name="memberMax" value="<%= d.member_max %>" style="width:56px" aria-label="max">
+          </div>
+          <div class="small muted"><%= t('admin.entryKind.' + kindOf(d)) %></div>
+        </div>
+        <div class="field">
+          <label for="dm<%= d.id %>"><%= t('admin.feeMode') %></label>
+          <select id="dm<%= d.id %>" name="feeMode">
+            <option value="per_entry" <%= d.fee_mode === 'per_entry' ? 'selected' : '' %>><%= t('admin.feePerEntry') %></option>
+            <option value="per_person" <%= d.fee_mode === 'per_person' ? 'selected' : '' %>><%= t('admin.feePerPerson') %></option>
+            <option value="tiered" <%= d.fee_mode === 'tiered' ? 'selected' : '' %>><%= t('admin.feeTiered') %></option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dg<%= d.id %>"><%= t('admin.feeGroup') %></label>
+          <select id="dg<%= d.id %>" name="feeGroupId">
+            <option value=""><%= t('admin.noFeeGroup') %></option>
+            <% feeGroups.forEach(function (g) { %>
+              <option value="<%= g.id %>" <%= String(d.fee_group_id) === String(g.id) ? 'selected' : '' %>><%= g.name %></option>
+            <% }); %>
+          </select>
+          <% if (d.fee_mode === 'tiered' && !d.fee_group_id) { %>
+            <div class="small bad"><%= t('admin.tieredNeedsGroup') %></div>
+          <% } %>
+        </div>
+        <div class="field">
+          <label for="df<%= d.id %>"><%= t('competition.fee') %></label>
+          <input id="df<%= d.id %>" type="text" inputmode="numeric" name="feeCents" style="width:96px"
+                 value="<%= d.fee_cents === null ? '' : d.fee_cents %>">
+        </div>
+        <div class="field">
+          <label for="dx<%= d.id %>"><%= t('admin.extraDivisionFee') %></label>
+          <input id="dx<%= d.id %>" type="text" inputmode="numeric" name="extraDivisionFeeCents" style="width:96px"
+                 value="<%= d.extra_division_fee_cents %>">
+        </div>
+        <div class="field">
+          <label><%= t('admin.ageLimits') %></label>
+          <div style="display:flex; gap:6px; align-items:center">
+            <input type="text" inputmode="numeric" name="ageMin" style="width:56px" aria-label="age min"
+                   value="<%= d.age_min === null ? '' : d.age_min %>">
+            <span>–</span>
+            <input type="text" inputmode="numeric" name="ageMax" style="width:56px" aria-label="age max"
+                   value="<%= d.age_max === null ? '' : d.age_max %>">
+          </div>
+        </div>
+        <div class="field">
+          <button type="submit" class="ghost small"><%= t('common.save') %></button>
+        </div>
+      </form>
+      <form method="post" action="/admin/c/<%= competition.id %>/divisions/<%= d.id %>/delete" class="division-delete">
+        <button type="submit" class="ghost small"><%= t('common.delete') %></button>
+      </form>
+    </div>
+  <% }); %>
+  <% if (divisions.length === 0) { %><p class="muted"><%= t('admin.noDivisions') %></p><% } %>
+
+  <form method="post" action="/admin/c/<%= competition.id %>/divisions" style="margin-top:16px">
+    <h3 style="font-size:15px"><%= t('admin.addDivision') %></h3>
+    <label for="dname"><%= t('admin.divisionName') %></label>
+    <input id="dname" type="text" name="name" required maxlength="120">
+
+    <label><%= t('admin.members') %></label>
+    <div style="display:flex; gap:8px; align-items:center">
+      <input type="text" inputmode="numeric" name="memberMin" value="1" style="width:70px" aria-label="min">
+      <span>–</span>
+      <input type="text" inputmode="numeric" name="memberMax" value="1" style="width:70px" aria-label="max">
+    </div>
+    <p class="small muted"><%= t('admin.membersHint') %></p>
+
+    <label for="dmode"><%= t('admin.feeMode') %></label>
+    <select id="dmode" name="feeMode">
+      <option value="per_entry"><%= t('admin.feePerEntry') %></option>
+      <option value="per_person"><%= t('admin.feePerPerson') %></option>
+      <option value="tiered"><%= t('admin.feeTiered') %></option>
+    </select>
+
+    <label for="dgroup"><%= t('admin.feeGroup') %></label>
+    <select id="dgroup" name="feeGroupId">
+      <option value=""><%= t('admin.noFeeGroup') %></option>
+      <% feeGroups.forEach(function (g) { %>
+        <option value="<%= g.id %>"><%= g.name %></option>
+      <% }); %>
+    </select>
+    <p class="small muted"><%= t('admin.feeGroupPickHint') %></p>
+
+    <label for="dfee"><%= t('competition.fee') %></label>
+    <input id="dfee" type="text" inputmode="numeric" name="feeCents" placeholder="<%= competition.fee_cents %>">
+    <p class="small muted"><%= t('admin.divisionFeeHint') %></p>
+
+    <label for="dextra"><%= t('admin.extraDivisionFee') %></label>
+    <input id="dextra" type="text" inputmode="numeric" name="extraDivisionFeeCents" value="0">
+    <p class="small muted"><%= t('admin.extraDivisionFeeHint') %></p>
+
+    <label><%= t('admin.ageLimits') %></label>
+    <div style="display:flex; gap:8px; align-items:center">
+      <input type="text" inputmode="numeric" name="ageMin" style="width:70px" aria-label="age min">
+      <span>–</span>
+      <input type="text" inputmode="numeric" name="ageMax" style="width:70px" aria-label="age max">
+    </div>
+    <p class="small muted"><%= t('admin.ageLimitsHint') %></p>
+
+    <p style="margin-top:16px"><button type="submit"><%= t('admin.addDivision') %></button></p>
+  </form>
+</div>
+
+<h2><%= t('admin.voucher') %></h2>
+<div class="card">
+  <% if (voucher) { %>
+    <p><code class="voucher"><%= voucher.code %></code></p>
+    <p class="small muted">
+      <%= t('admin.voucherIssuedAt') %>: <%= when(voucher.issued_at) %> ·
+      <%= t('admin.voucherEntries') %>: <%= voucher.entry_count %> ·
+      <%= t('admin.voucherTotal') %>: <%= money(voucher.total_cents, competition.currency) %>
+    </p>
+    <form method="post" action="/admin/c/<%= competition.id %>/resettle" style="margin-top:12px">
+      <button type="submit" class="ghost"><%= t('admin.resettle') %></button>
+      <span class="small muted"><%= t('admin.resettleHint') %></span>
+    </form>
+  <% } else { %>
+    <p class="muted"><%= t('admin.voucherNone') %></p>
+    <form method="post" action="/admin/c/<%= competition.id %>/settle">
+      <button type="submit"><%= t('admin.closeRegistration') %></button>
+    </form>
+  <% } %>
+</div>
+
+<h2><%= t('admin.registrations') %></h2>
+<table>
+  <tr>
+    <th>#</th><th><%= t('register.athleteName') %></th><th><%= t('register.division') %></th>
+    <th><%= t('common.amount') %></th><th><%= t('common.status') %></th><th></th>
+  </tr>
+  <% registrations.forEach(function (r) { %>
+    <tr>
+      <td><%= r.id %></td>
+      <td><%= r.athlete_name %><% if (r.unit_name) { %><div class="small muted"><%= r.unit_name %></div><% } %></td>
+      <td><%= r.division_name %></td>
+      <%# 0 元不一定是免費：用收費方案時，那是基本盤已經含了這一項。 %>
+      <%# Zero is not always free: under a fee plan the base already covered this item. %>
+      <td><%= r.amount_cents > 0 ? money(r.amount_cents, r.currency)
+              : (r.fee_mode === 'tiered' ? t('register.includedInPlan') : t('common.free')) %></td>
+      <td>
+        <span class="pill <%= r.status === 'paid' ? 'ok' : (r.status === 'pending' ? 'warn' : 'bad') %>"><%= t('registration.status.' + r.status) %></span>
+        <% if (r.paid_source) { %><div class="small muted"><%= t('payment.source.' + r.paid_source) %></div><% } %>
+      </td>
+      <td>
+        <% if (r.status === 'pending') { %>
+          <form method="post" action="/admin/r/<%= r.id %>/mark-paid">
+            <input type="hidden" name="competitionId" value="<%= competition.id %>">
+            <button type="submit" class="ghost small"><%= t('admin.markPaid') %></button>
+          </form>
+        <% } %>
+      </td>
+    </tr>
+  <% }); %>
+</table>
+<p class="small muted"><%= t('admin.markPaidHint') %></p>

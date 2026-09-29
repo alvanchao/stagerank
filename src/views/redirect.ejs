@@ -1,0 +1,11 @@
+<h1><%= t('payment.redirecting') %></h1>
+<div class="card">
+  <p class="muted small"><%= t('payment.provider.' + provider) %><% if (sandbox) { %> · <%= t('payment.sandboxNotice') %><% } %></p>
+  <form id="pay" method="<%= checkout.method %>" action="<%= checkout.url %>">
+    <% Object.entries(checkout.fields).forEach(function (entry) { %>
+      <input type="hidden" name="<%= entry[0] %>" value="<%= entry[1] %>">
+    <% }); %>
+    <button type="submit"><%= t('register.submitAndPay') %></button>
+  </form>
+</div>
+<script>document.getElementById('pay').submit();</script>

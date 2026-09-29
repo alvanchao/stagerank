@@ -1,0 +1,115 @@
+<h1><%= t('entrant.title') %></h1>
+<p class="small muted">
+  <%= entrant.email %><% if (entrant.unit_name) { %> · <%= entrant.unit_name %><% } %>
+  · <a href="/entrant/password"><%= t('entrant.changePassword') %></a>
+</p>
+
+<% if (error) { %><div class="notice bad"><%= t(error, typeof errorParams !== 'undefined' ? errorParams : null) %></div><% } %>
+
+<h2><%= t('roster.title') %></h2>
+<p class="small muted"><%= t('roster.hint') %></p>
+
+<div class="card">
+  <% if (roster.length === 0) { %>
+    <p class="muted"><%= t('roster.empty') %></p>
+  <% } %>
+
+  <% roster.forEach(function (a) { %>
+    <% if (String(editId) === String(a.id)) { %>
+      <form class="division-row" method="post" action="/entrant/roster/<%= a.id %>">
+        <div class="division-form">
+          <div class="field grow">
+            <label for="n<%= a.id %>"><%= t('roster.name') %></label>
+            <input id="n<%= a.id %>" type="text" name="name" value="<%= a.name %>" required maxlength="120">
+          </div>
+          <div class="field">
+            <label for="b<%= a.id %>"><%= t('roster.birthDate') %></label>
+            <input id="b<%= a.id %>" type="date" name="birthDate" value="<%= ymd(a.birth_date) %>" required>
+          </div>
+          <div class="field grow">
+            <label for="e<%= a.id %>"><%= t('roster.email') %></label>
+            <input id="e<%= a.id %>" type="email" name="email" value="<%= a.email || '' %>" maxlength="180">
+          </div>
+          <div class="field"><button type="submit" class="ghost small"><%= t('common.save') %></button></div>
+        </div>
+      </form>
+    <% } else { %>
+      <div class="division-row">
+        <div class="division-form">
+          <div class="field grow">
+            <strong><%= a.name %></strong>
+            <span class="small muted"><%= ymd(a.birth_date) %><% if (a.email) { %> · <%= a.email %><% } %></span>
+          </div>
+          <div class="field">
+            <a class="btn ghost small" href="/entrant?edit=<%= a.id %>"><%= t('common.edit') %></a>
+          </div>
+        </div>
+        <form method="post" action="/entrant/roster/<%= a.id %>/delete" class="division-delete">
+          <button type="submit" class="ghost small"><%= t('common.delete') %></button>
+        </form>
+      </div>
+    <% } %>
+  <% }); %>
+
+  <%# 連續新增：打完一位按 Enter 就送出，下一位的游標自動回到姓名欄。 %>
+  <%# Add one after another: Enter submits, and the cursor lands back on the name for the next. %>
+  <form method="post" action="/entrant/roster" id="add" style="margin-top:16px">
+    <h3 style="font-size:15px"><%= t('roster.addOne') %></h3>
+    <div class="division-form">
+      <div class="field grow">
+        <label for="newName"><%= t('roster.name') %></label>
+        <input id="newName" type="text" name="name" required maxlength="120" autofocus>
+      </div>
+      <div class="field">
+        <label for="newBirth"><%= t('roster.birthDate') %></label>
+        <input id="newBirth" type="date" name="birthDate" required>
+      </div>
+      <div class="field grow">
+        <label for="newEmail"><%= t('roster.email') %></label>
+        <input id="newEmail" type="email" name="email" maxlength="180">
+      </div>
+      <div class="field"><button type="submit"><%= t('roster.add') %></button></div>
+    </div>
+    <p class="small muted"><%= t('roster.addHint') %></p>
+  </form>
+</div>
+
+<h2><%= t('entrant.myEntries') %></h2>
+<% if (entries.length === 0) { %>
+  <p class="muted"><%= t('entrant.noEntries') %></p>
+<% } else { %>
+  <table>
+    <tr>
+      <th><%= t('entrant.competition') %></th>
+      <th><%= t('register.division') %></th>
+      <th><%= t('register.athleteName') %></th>
+      <th><%= t('common.amount') %></th>
+      <th><%= t('common.status') %></th>
+    </tr>
+    <% entries.forEach(function (r) { %>
+      <tr>
+        <td><a href="/c/<%= r.competition_slug %>"><%= r.competition_name %></a></td>
+        <td><%= r.division_name %></td>
+        <td><%= r.athlete_name %></td>
+        <td><%= r.amount_cents > 0 ? money(r.amount_cents, r.currency)
+                : (r.fee_mode === 'tiered' ? t('register.includedInPlan') : t('common.free')) %></td>
+        <td><span class="pill <%= r.status === 'paid' ? 'ok' : (r.status === 'pending' ? 'warn' : 'bad') %>"><%= t('registration.status.' + r.status) %></span></td>
+      </tr>
+    <% }); %>
+  </table>
+<% } %>
+
+<form method="post" action="/entrant/logout" style="margin-top:24px">
+  <button type="submit" class="ghost"><%= t('entrant.signOut') %></button>
+</form>
+
+<script>
+  (function () {
+    // 剛新增完一位就把游標送回姓名欄，讓老師可以一位接一位打下去。
+    // After an add, the cursor goes back to the name so the teacher can keep typing.
+    if (window.location.hash === '#add') {
+      var name = document.getElementById('newName');
+      if (name) name.focus();
+    }
+  })();
+</script>

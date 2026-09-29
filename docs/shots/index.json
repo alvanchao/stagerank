@@ -1,0 +1,66 @@
+[
+  {
+    "name": "10-schedule",
+    "note": "賽前準備：舞科、輪次、背號、裁判、秩序表（含併場）"
+  },
+  {
+    "name": "11-desk-before",
+    "note": "報到處：還沒有人報到"
+  },
+  {
+    "name": "12-desk-after",
+    "note": "報到後：只有 106 沒來，其他都報到了"
+  },
+  {
+    "name": "13-checkin",
+    "note": "檢錄：沒報到的 106 反灰，檢錄人員一看就知道今天沒來"
+  },
+  {
+    "name": "14-checkin-done",
+    "note": "檢錄完成：105 還沒到、106 沒報到"
+  },
+  {
+    "name": "15-host-standby",
+    "note": "主持人按下一場：進入預備，裁判燈號全部是未確認"
+  },
+  {
+    "name": "16-judge-standby",
+    "note": "裁判預備畫面：勿擾模式提醒，按「準備好了」"
+  },
+  {
+    "name": "17-host-ready",
+    "note": "三位裁判都按了準備好，主持人看到燈號變綠"
+  },
+  {
+    "name": "18-judge-scoring",
+    "note": "評分中：mark 勾選，畫面顯示已勾幾／幾"
+  },
+  {
+    "name": "19-host-late",
+    "note": "105 音樂放了才衝進場，主持人按「補點」"
+  },
+  {
+    "name": "20-judge-late",
+    "note": "補點之後，105 立刻出現在裁判手機上"
+  },
+  {
+    "name": "21-host-submitted",
+    "note": "三位裁判都送出，燈號全部變成已送出"
+  },
+  {
+    "name": "22-admin-results",
+    "note": "主辦後台的成績：計算完成，已公告"
+  },
+  {
+    "name": "23-results-public",
+    "note": "公開成績頁：選手用手機看得到名次與晉級"
+  },
+  {
+    "name": "24-results-bib",
+    "note": "選手用背號查自己：每支舞在第幾場、名次、有沒有晉級"
+  },
+  {
+    "name": "25-results-en",
+    "note": "同一頁，瀏覽器是英文就自動變英文"
+  }
+]

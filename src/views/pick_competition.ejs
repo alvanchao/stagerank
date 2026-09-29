@@ -1,0 +1,10 @@
+<h1><%= title %></h1>
+<% if (competitions.length === 0) { %>
+  <p class="muted"><%= t('home.noCompetitions') %></p>
+<% } %>
+<% competitions.forEach(function (c) { %>
+  <div class="card">
+    <h2 style="margin-top:0"><%= c.name %></h2>
+    <a class="btn" href="/<%= kind %>/<%= useSlug ? c.slug : c.id %>"><%= t('common.confirm') %></a>
+  </div>
+<% }); %>

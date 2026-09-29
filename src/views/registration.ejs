@@ -1,0 +1,14 @@
+<h1><%= t('register.success') %></h1>
+
+<div class="card">
+  <p><strong><%= registration.athlete_name %></strong> — <%= divisionName %></p>
+  <p class="small muted">
+    <%= t('register.yourNumber') %>: <code>#<%= registration.id %></code> ·
+    <span class="pill <%= registration.status === 'paid' ? 'ok' : 'warn' %>"><%= t('registration.status.' + registration.status) %></span>
+    <% if (registration.amount_cents > 0) { %> · <%= money(registration.amount_cents, registration.currency) %><% } else { %> · <%= t('common.free') %><% } %>
+    <% if (registration.paid_source) { %> · <%= t('payment.source.' + registration.paid_source) %><% } %>
+  </p>
+  <p><%= registration.status === 'paid' ? t('register.successPaid') : t('register.successPending') %></p>
+</div>
+
+<p><a class="btn ghost" href="/"><%= t('common.back') %></a></p>

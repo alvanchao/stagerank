@@ -1,0 +1,19 @@
+<h1><%= t('home.title') %></h1>
+
+<% if (competitions.length === 0) { %>
+  <p class="muted"><%= t('home.noCompetitions') %></p>
+<% } %>
+
+<% competitions.forEach(function (c) { %>
+  <div class="card">
+    <h2 style="margin-top:0"><%= c.name %></h2>
+    <p class="small muted">
+      <span class="pill <%= c.status === 'open' ? 'ok' : '' %>"><%= t('competition.status.' + c.status) %></span>
+      <% if (c.fee_cents > 0) { %> · <%= t('competition.fee') %>: <%= money(c.fee_cents, c.currency) %><% } else { %> · <%= t('common.free') %><% } %>
+      <% if (c.closes_at) { %> · <%= t('competition.closesAt') %>: <%= when(c.closes_at) %><% } %>
+    </p>
+    <% if (c.status === 'open') { %>
+      <a class="btn" href="/c/<%= c.slug %>"><%= t('home.registerNow') %></a>
+    <% } %>
+  </div>
+<% }); %>

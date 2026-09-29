@@ -1,0 +1,62 @@
+<h1><%= competition.name %></h1>
+
+<form class="card" method="get" action="/results/<%= competition.slug %>/bib">
+  <label for="bib"><%= t('results.enterBib') %></label>
+  <input id="bib" type="text" name="bib" inputmode="numeric" value="<%= bib %>">
+  <p style="margin-top:12px"><button type="submit"><%= t('results.lookup') %></button></p>
+</form>
+
+<% if (notFound) { %><div class="notice bad"><%= t('results.notFound') %></div><% } %>
+
+<% if (lookup && lookup.name) { %>
+  <div class="card">
+    <h2 style="margin-top:0"><%= lookup.bib %> · <%= lookup.name %></h2>
+    <% if (lookup.heats.length > 0) { %>
+      <table>
+        <tr><th><%= t('schedule.round') %></th><th><%= t('schedule.dances') %></th><th><%= t('schedule.heat') %></th></tr>
+        <% lookup.heats.forEach(function (h) { %>
+          <tr><td><%= h.round_name %></td><td><%= h.dance_name %></td><td><%= h.heat_number %></td></tr>
+        <% }); %>
+      </table>
+    <% } %>
+    <% if (lookup.results.length > 0) { %>
+      <table style="margin-top:16px">
+        <tr><th><%= t('schedule.round') %></th><th><%= t('results.rank') %></th><th></th></tr>
+        <% lookup.results.forEach(function (r) { %>
+          <tr>
+            <td><%= r.division_name %> <%= r.round_name %></td>
+            <td><%= r.absent ? t('floor.absent') : r.final_rank %></td>
+            <td><% if (r.advanced) { %><span class="pill ok"><%= t('results.advanced') %></span><% } %></td>
+          </tr>
+        <% }); %>
+      </table>
+    <% } %>
+  </div>
+<% } %>
+
+<% blocks.forEach(function (block) { %>
+  <h2><%= block.division.name %></h2>
+  <% block.rounds.forEach(function (r) { %>
+    <div class="card">
+      <h3 style="margin-top:0"><%= r.round.name %></h3>
+      <table>
+        <tr><th><%= t('results.rank') %></th><th><%= t('results.bib') %></th><th><%= t('register.athleteName') %></th><th></th></tr>
+        <% r.results.forEach(function (row) { %>
+          <tr>
+            <td><%= row.absent ? '—' : row.final_rank %></td>
+            <td><%= row.bib_number || '—' %></td>
+            <td><%= row.athlete_name %><% if (row.unit_name) { %><div class="small muted"><%= row.unit_name %></div><% } %></td>
+            <td>
+              <% if (row.absent) { %><span class="pill bad"><%= t('floor.absent') %></span>
+              <% } else if (row.advanced) { %><span class="pill ok"><%= t('results.advanced') %></span><% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </table>
+    </div>
+  <% }); %>
+<% }); %>
+
+<% if (blocks.length === 0 && !lookup) { %>
+  <p class="muted"><%= t('results.notPublished') %></p>
+<% } %>

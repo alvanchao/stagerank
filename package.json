@@ -1,0 +1,26 @@
+{
+  "name": "stagerank",
+  "version": "0.1.0",
+  "description": "StageRank — free, open-source competition management: registration, payments, heats, judging, results.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node scripts/seed.js",
+    "test": "node --test test/*.test.js",
+    "test:unit": "node --test test/i18n.test.js test/payments.test.js test/schedule.test.js test/scoring.test.js test/floor.test.js test/flow.test.js test/web.test.js",
+    "demo": "node scripts/demo.mjs"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

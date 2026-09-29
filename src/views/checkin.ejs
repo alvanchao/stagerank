@@ -1,0 +1,45 @@
+<h1><%= t('floor.checkinTitle') %></h1>
+<p class="small muted"><%= competition.name %></p>
+<% if (typeof error !== 'undefined' && error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<% if (heats.length === 0) { %>
+  <p class="muted"><%= t('floor.noMoreHeats') %></p>
+<% } %>
+
+<% heats.forEach(function (block, index) { %>
+  <div class="card">
+    <h2 style="margin-top:0">
+      <%= block.heat.label %>
+      <% if (index === 0) { %><span class="pill"><%= t('floor.next') %></span><% } %>
+      <% if (block.ready) { %><span class="pill ok"><%= t('floor.ready') %></span><% } %>
+    </h2>
+    <table>
+      <% block.entries.forEach(function (e) { %>
+        <tr class="<%= e.reported_at ? '' : 'dim' %>">
+          <td style="width:64px"><strong><%= e.bib_number || '—' %></strong></td>
+          <td>
+            <%= e.athlete_name %>
+            <div class="small muted">
+              <%= e.division_name %>
+              <% if (!e.reported_at) { %> · <span class="warn"><%= t('floor.notReported') %></span><% } %>
+              <% if (e.entry_status === 'absent') { %> · <span class="bad"><%= t('floor.absent') %></span><% } %>
+            </div>
+          </td>
+          <td style="width:112px">
+            <form method="post" action="/checkin/<%= competition.id %>/entry/<%= e.heat_entry_id %>">
+              <% if (e.checked_in_at) { %>
+                <input type="hidden" name="undo" value="1">
+                <button type="submit" class="ghost small"><span class="pill ok"><%= t('floor.checkedIn') %></span></button>
+              <% } else { %>
+                <button type="submit" class="small"><%= t('floor.checkedIn') %></button>
+              <% } %>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </table>
+  </div>
+<% }); %>
+
+<p class="small muted"><%= t('floor.notReported') %>：<%= t('admin.markPaidHint') %></p>
+<script src="/live.js" data-competition="<%= competition.id %>"></script>

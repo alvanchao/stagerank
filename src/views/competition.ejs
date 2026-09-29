@@ -1,0 +1,288 @@
+<h1><%= competition.name %></h1>
+<p class="small muted">
+  <span class="pill <%= competition.status === 'open' ? 'ok' : '' %>"><%= t('competition.status.' + competition.status) %></span>
+  <%# 用收費方案的比賽，比賽層級的報名費是 0，但不等於免費。 %>
+  <%# A competition on a fee plan has a zero competition-level fee, which does not mean free. %>
+  <% if (competition.fee_cents > 0) { %> · <%= t('competition.fee') %>: <%= money(competition.fee_cents, competition.currency) %>
+  <% } else if (!needsPayment) { %> · <%= t('common.free') %><% } %>
+  <% if (competition.event_date) { %> · <%= t('competition.eventDate') %>: <%= ymd(competition.event_date) %><% } %>
+</p>
+
+<% if (competition.status !== 'open') { %>
+  <div class="notice bad"><%= t('register.closedNotice') %></div>
+<% } else if (!entrant) { %>
+  <%# 報名一律要先登入。名冊建一次，之後每一場比賽都用點的。 %>
+  <%# Registering means signing in. The roster is built once and ticked ever after. %>
+  <div class="card">
+    <h2 style="margin-top:0"><%= t('register.title') %></h2>
+    <p><%= t('register.signInFirst') %></p>
+    <p>
+      <a class="btn" href="/entrant/login?next=<%= encodeURIComponent('/c/' + competition.slug) %>"><%= t('entrant.signIn') %></a>
+      <a class="btn ghost" href="/entrant/signup"><%= t('entrant.signUp') %></a>
+    </p>
+  </div>
+<% } else { %>
+  <% if (error) { %><div class="notice bad"><%= t(error, typeof errorParams !== 'undefined' ? errorParams : null) %></div><% } %>
+
+  <% if (roster.length === 0) { %>
+    <div class="card">
+      <h2 style="margin-top:0"><%= t('register.title') %></h2>
+      <p><%= t('register.rosterEmpty') %></p>
+      <p><a class="btn" href="/entrant"><%= t('roster.title') %></a></p>
+    </div>
+  <% } else { %>
+    <form class="card" method="post" action="/c/<%= competition.slug %>/register">
+      <h2 style="margin-top:0"><%= t('register.title') %></h2>
+
+      <label for="divisionId"><%= t('register.division') %></label>
+      <select id="divisionId" name="divisionId" required>
+        <option value=""><%= t('register.chooseDivision') %></option>
+        <% divisions.forEach(function (d) { %>
+          <option value="<%= d.id %>"
+                  data-base="<%= (d.fee_cents === null || d.fee_cents === undefined) ? competition.fee_cents : d.fee_cents %>"
+                  data-mode="<%= d.fee_mode %>"
+                  data-extra="<%= d.extra_division_fee_cents %>"
+                  data-min="<%= d.member_min %>" data-max="<%= d.member_max %>"
+                  data-agemin="<%= d.age_min === null ? '' : d.age_min %>"
+                  data-agemax="<%= d.age_max === null ? '' : d.age_max %>"
+                  data-kind="<%= t('admin.entryKind.' + kindOf(d)) %>"
+                  data-group="<%= d.fee_group_id || '' %>"
+                  <%= String(form.divisionId) === String(d.id) ? 'selected' : '' %>>
+            <%= d.name %><% if (d.fee_cents !== null) { %> — <%= money(d.fee_cents, competition.currency) %><% } %>
+          </option>
+        <% }); %>
+      </select>
+      <p id="divisionHint" class="small muted"></p>
+
+      <label for="unitName"><%= t('register.unitName') %></label>
+      <input id="unitName" type="text" name="unitName" maxlength="120"
+             value="<%= form.unitName || entrant.unit_name || '' %>">
+
+      <%# 從名冊勾選。年齡不符的當場反灰，老師不必送出去才知道報錯組。 %>
+      <%# Ticked off the roster. Anyone outside the age limits greys out at once, so the teacher
+          does not have to submit to find out they picked the wrong division. %>
+      <label><%= t('register.chooseAthletes') %></label>
+      <div id="rosterList">
+        <% roster.forEach(function (a) { %>
+          <label class="roster-pick" data-age-year="<%= ageYearEnd(a) %>" data-age-day="<%= ageEventDay(a) %>"
+                 data-taken="<%= JSON.stringify(takenCounts ? Object.keys(takenCounts).reduce(function (acc, g) { if (takenCounts[g][String(a.id)]) acc[g] = takenCounts[g][String(a.id)]; return acc; }, {}) : {}) %>">
+            <input type="checkbox" name="athleteIds" value="<%= a.id %>">
+            <span class="roster-name"><%= a.name %></span>
+            <span class="small muted"><%= ymd(a.birth_date) %> · <%= t('roster.ageNow', { age: ageYearEnd(a) }) %></span>
+            <span class="small item" hidden></span>
+            <span class="small bad reason" hidden></span>
+          </label>
+        <% }); %>
+      </div>
+      <p class="small muted"><a href="/entrant"><%= t('register.manageRoster') %></a></p>
+
+      <div id="feePreview" class="notice" hidden
+           data-currency="<%= competition.currency %>"
+           data-locale="<%= locale %>"
+           data-basis="<%= competition.age_basis %>"
+           data-total="<%= t('register.feeTotal') %>"
+           data-each="<%= t('register.feeEach') %>"
+           data-extra="<%= t('register.feeExtraNote') %>"
+           data-picked="<%= t('register.pickedCount') %>"
+           data-need="<%= t('register.needMembers') %>"
+           data-agebad="<%= t('register.ageOutOfRangeShort') %>"
+           data-ageyoung="<%= t('register.ageTooYoung') %>"
+           data-ageold="<%= t('register.ageTooOld') %>"
+           data-item="<%= t('register.itemLine') %>"
+           data-groups="<%= JSON.stringify((feeGroups || []).reduce(function (acc, g) { acc[g.id] = { base: Number(g.base_fee_cents), includes: g.base_includes, extra: Number(g.extra_item_fee_cents), name: g.name }; return acc; }, {})) %>"></div>
+
+      <% if (needsPayment) { %>
+        <label for="provider"><%= t('register.paymentMethod') %></label>
+        <select id="provider" name="provider" required>
+          <option value=""><%= t('register.choosePayment') %></option>
+          <% providers.forEach(function (p) { %>
+            <option value="<%= p %>" <%= form.provider === p ? 'selected' : '' %>><%= t('payment.provider.' + p) %></option>
+          <% }); %>
+        </select>
+        <% if (providers.length === 0) { %>
+          <p class="small muted"><%= t('register.errors.providerUnavailable') %></p>
+        <% } %>
+        <% if (anySandbox) { %><p class="small muted"><%= t('payment.sandboxNotice') %></p><% } %>
+      <% } %>
+
+      <p style="margin-top:20px">
+        <button type="submit" id="submitButton"><%= needsPayment ? t('register.submitAndPay') : t('register.submitFree') %></button>
+      </p>
+    </form>
+  <% } %>
+<% } %>
+
+<script>
+  (function () {
+    var select = document.getElementById('divisionId');
+    if (!select) return;
+    var list = document.getElementById('rosterList');
+    var preview = document.getElementById('feePreview');
+    var hint = document.getElementById('divisionHint');
+    var submit = document.getElementById('submitButton');
+    var picks = Array.prototype.slice.call(list.querySelectorAll('.roster-pick'));
+    var ZERO_DECIMAL = ['TWD', 'JPY', 'KRW', 'VND', 'CLP', 'ISK'];
+
+    function money(cents) {
+      var code = (preview.getAttribute('data-currency') || 'TWD').toUpperCase();
+      var zero = ZERO_DECIMAL.indexOf(code) >= 0;
+      var value = zero ? cents : cents / 100;
+      try {
+        return new Intl.NumberFormat(preview.getAttribute('data-locale') || undefined, {
+          style: 'currency', currency: code, maximumFractionDigits: zero ? 0 : 2,
+        }).format(value);
+      } catch (e) {
+        return code + ' ' + value;
+      }
+    }
+
+    function fill(template, params) {
+      return String(template || '').replace(/\{(\w+)\}/g, function (whole, key) {
+        return Object.prototype.hasOwnProperty.call(params, key) ? params[key] : whole;
+      });
+    }
+
+    function numberOrNull(value) {
+      if (value === '' || value === null || value === undefined) return null;
+      var n = parseInt(value, 10);
+      return isNaN(n) ? null : n;
+    }
+
+    function chosen() {
+      return select.options[select.selectedIndex] || null;
+    }
+
+    var GROUPS = {};
+    try { GROUPS = JSON.parse(preview.getAttribute('data-groups') || '{}'); } catch (e) { GROUPS = {}; }
+
+    function takenBy(pick, groupId) {
+      try {
+        var map = JSON.parse(pick.getAttribute('data-taken') || '{}');
+        return map[groupId] || 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    // 第 n 項多少錢。跟伺服器端同一條規則：基本費含幾項，之後每項加項費。
+    // What the nth item costs, by the same rule the server uses.
+    function priceOfItem(group, n) {
+      var includes = Math.max(1, group.includes || 1);
+      if (n <= includes) return n === 1 ? group.base : 0;
+      return group.extra;
+    }
+
+    function ageOf(pick) {
+      var basis = preview.getAttribute('data-basis') === 'event_day' ? 'day' : 'year';
+      return parseInt(pick.getAttribute(basis === 'day' ? 'data-age-day' : 'data-age-year'), 10);
+    }
+
+    function refresh() {
+      var option = chosen();
+      var picked = 0;
+
+      if (!option || !option.value) {
+        picks.forEach(function (pick) {
+          pick.classList.remove('disabled');
+          var box = pick.querySelector('input');
+          box.disabled = false;
+          pick.querySelector('.reason').hidden = true;
+        });
+        hint.textContent = '';
+        preview.hidden = true;
+        return;
+      }
+
+      var min = numberOrNull(option.getAttribute('data-min')) || 1;
+      var max = numberOrNull(option.getAttribute('data-max')) || min;
+      var ageMin = numberOrNull(option.getAttribute('data-agemin'));
+      var ageMax = numberOrNull(option.getAttribute('data-agemax'));
+      var base = numberOrNull(option.getAttribute('data-base')) || 0;
+      var extra = numberOrNull(option.getAttribute('data-extra')) || 0;
+
+      picks.forEach(function (pick) {
+        var age = ageOf(pick);
+        var bad = (ageMin !== null && age < ageMin) || (ageMax !== null && age > ageMax);
+        var box = pick.querySelector('input');
+        var reason = pick.querySelector('.reason');
+        // 年齡不符的直接不能勾，並且當場說出原因。
+        // Anyone outside the limits cannot be ticked, and is told why on the spot.
+        if (bad) {
+          box.checked = false;
+          box.disabled = true;
+          pick.classList.add('disabled');
+          // 只有一邊有限制時，說「18 歲以上」比「18 到 — 歲」清楚得多。
+          // With only one bound set, "18 and over" reads far better than "18 to —".
+          var template = preview.getAttribute('data-agebad');
+          if (ageMax === null) template = preview.getAttribute('data-ageyoung');
+          else if (ageMin === null) template = preview.getAttribute('data-ageold');
+          reason.textContent = fill(template, { age: age, min: ageMin, max: ageMax });
+          reason.hidden = false;
+        } else {
+          box.disabled = false;
+          pick.classList.remove('disabled');
+          reason.hidden = true;
+        }
+        if (box.checked) picked += 1;
+      });
+
+      // 勾滿上限之後，其他人就不給勾，免得送出去才被退。
+      // Once the maximum is reached the rest stop accepting ticks, rather than failing on submit.
+      if (picked >= max) {
+        picks.forEach(function (pick) {
+          var box = pick.querySelector('input');
+          if (!box.checked && !pick.classList.contains('disabled')) box.disabled = true;
+        });
+      }
+
+      hint.textContent = option.getAttribute('data-kind') +
+        (max > min ? ' · ' + fill(preview.getAttribute('data-need'), { min: min, max: max }) : '');
+
+      var mode = option.getAttribute('data-mode');
+      var groupId = option.getAttribute('data-group') || '';
+      var group = GROUPS[groupId] || null;
+      var lines = [fill(preview.getAttribute('data-picked'), { picked: picked, min: min, max: max })];
+
+      // 階梯計價：每位選手在這一群裡各自數自己的項數，所以價錢寫在他自己那一行。
+      // Tiered: each competitor counts their own items in this group, so the price goes on
+      // their own line rather than in one lump at the bottom.
+      picks.forEach(function (pick) {
+        var note = pick.querySelector('.item');
+        var box = pick.querySelector('input');
+        if (mode !== 'tiered' || !group || !box.checked) { note.hidden = true; return; }
+        var index = takenBy(pick, groupId) + 1;
+        note.textContent = fill(preview.getAttribute('data-item'), {
+          index: index, amount: money(priceOfItem(group, index)),
+        });
+        note.hidden = false;
+      });
+
+      if (picked >= min) {
+        var total;
+        if (mode === 'tiered' && group) {
+          total = 0;
+          picks.forEach(function (pick) {
+            if (!pick.querySelector('input').checked) return;
+            total += priceOfItem(group, takenBy(pick, groupId) + 1);
+          });
+        } else {
+          total = mode === 'per_person' ? base * picked : base;
+        }
+        lines.push(fill(preview.getAttribute('data-total'), { amount: money(total) }));
+        if (mode === 'per_person') {
+          lines.push(fill(preview.getAttribute('data-each'), { count: picked, each: money(base) }));
+        }
+        if (mode !== 'tiered' && extra > 0) {
+          lines.push(fill(preview.getAttribute('data-extra'), { amount: money(extra) }));
+        }
+      }
+      preview.textContent = lines.join(' · ');
+      preview.hidden = false;
+      if (submit) submit.disabled = picked < min || picked > max;
+    }
+
+    select.addEventListener('change', refresh);
+    list.addEventListener('change', refresh);
+    refresh();
+  })();
+</script>

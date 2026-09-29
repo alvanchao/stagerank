@@ -1,0 +1,45 @@
+<p class="small"><a href="/admin/c/<%= competition.id %>/schedule">&larr; <%= t('schedule.title') %></a></p>
+<h1><%= t('results.title') %></h1>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<% blocks.forEach(function (block) { %>
+  <h2><%= block.division.name %></h2>
+  <% block.rounds.forEach(function (r) { %>
+    <div class="card">
+      <h3 style="margin-top:0">
+        <%= r.round.name %>
+        <span class="pill <%= r.round.published_at ? 'ok' : '' %>"><%= r.round.published_at ? t('results.published') : t('results.notPublished') %></span>
+      </h3>
+      <p>
+        <form method="post" action="/admin/c/<%= competition.id %>/round/<%= r.round.id %>/compute" style="display:inline">
+          <button type="submit" class="ghost small"><%= t('results.compute') %></button>
+        </form>
+        <form method="post" action="/admin/c/<%= competition.id %>/round/<%= r.round.id %>/publish" style="display:inline">
+          <% if (r.round.published_at) { %><input type="hidden" name="undo" value="1"><% } %>
+          <button type="submit" class="ghost small"><%= r.round.published_at ? t('results.unpublish') : t('results.publish') %></button>
+        </form>
+      </p>
+      <% if (r.results.length > 0) { %>
+        <table>
+          <tr><th><%= t('results.rank') %></th><th><%= t('results.bib') %></th><th><%= t('register.athleteName') %></th>
+              <th><%= t('results.marks') %></th><th><%= t('results.points') %></th><th></th></tr>
+          <% r.results.forEach(function (row) { %>
+            <tr>
+              <td><%= row.absent ? '—' : row.final_rank %></td>
+              <td><%= row.bib_number || '—' %></td>
+              <td><%= row.athlete_name %></td>
+              <td><%= row.total_marks === null ? '' : row.total_marks %></td>
+              <td><%= row.total_points === null ? '' : row.total_points %></td>
+              <td>
+                <% if (row.absent) { %><span class="pill bad"><%= t('floor.absent') %></span>
+                <% } else if (row.advanced) { %><span class="pill ok"><%= t('results.advanced') %></span><% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </table>
+      <% } %>
+    </div>
+  <% }); %>
+<% }); %>
+
+<p class="small"><a href="/results/<%= competition.slug %>"><%= t('results.title') %></a></p>

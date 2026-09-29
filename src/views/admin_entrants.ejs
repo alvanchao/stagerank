@@ -1,0 +1,35 @@
+<p class="small"><a href="/admin">&larr; <%= t('admin.title') %></a></p>
+<h1><%= t('admin.entrants') %></h1>
+
+<% if (shownPassword) { %>
+  <div class="notice"><%= t('admin.temporaryPasswordIs', { password: shownPassword }) %></div>
+<% } %>
+
+<div class="card">
+  <p class="small muted"><%= t('admin.resetPasswordHint') %></p>
+  <% if (entrants.length === 0) { %>
+    <p class="muted"><%= t('entrant.noEntries') %></p>
+  <% } %>
+  <table>
+    <% entrants.forEach(function (e) { %>
+      <tr>
+        <td>
+          <strong><%= e.email %></strong>
+          <div class="small muted">
+            <%= e.unit_name || '' %><% if (e.contact_name) { %> · <%= e.contact_name %><% } %><% if (e.phone) { %> · <%= e.phone %><% } %>
+          </div>
+        </td>
+        <td style="width:140px">
+          <% if (e.must_change_password) { %>
+            <span class="pill warn"><%= t('entrant.changePassword') %></span>
+          <% } %>
+        </td>
+        <td style="width:120px">
+          <form method="post" action="/admin/entrants/<%= e.id %>/reset-password">
+            <button type="submit" class="ghost small"><%= t('admin.resetPassword') %></button>
+          </form>
+        </td>
+      </tr>
+    <% }); %>
+  </table>
+</div>
