@@ -27,13 +27,27 @@ export function isRestrictedKey(key) {
   return typeof key === 'string' && /^rk_(test|live)_/.test(key);
 }
 
-const ZERO_DECIMAL = new Set(['TWD', 'JPY', 'KRW', 'VND', 'CLP', 'ISK']);
+// 真正的零小數幣別：金額直接就是整數。
+// True zero-decimal currencies: the amount is the integer itself.
+const ZERO_DECIMAL = new Set(['JPY', 'KRW', 'VND', 'CLP', 'PYG', 'RWF', 'XAF', 'XOF', 'XPF']);
+// 特例：TWD、ISK、UGX 在 Stripe 的 API 裡要當兩位小數寫（NT$100 要送 10000）。
+// 我們內部這幾種幣別的金額是整數元，所以送出前乘 100，收回來再除 100。
+// Special cases: Stripe wants TWD, ISK and UGX written with two decimals (NT$100 is sent as 10000).
+// Internally these amounts are whole units, so they are multiplied by 100 going out and divided coming back.
+// 來源 / source: https://docs.stripe.com/currencies#special-cases
+const WHOLE_UNIT_TWO_DECIMAL = new Set(['TWD', 'ISK', 'UGX']);
 
-// Stripe 的 unit_amount 用最小幣別單位；零小數幣別（如 TWD、JPY）直接就是整數。
-// Stripe's unit_amount is in the smallest unit; for zero-decimal currencies that is the integer itself.
 export function unitAmount(cents, currency) {
   const code = (currency || 'usd').toUpperCase();
-  return ZERO_DECIMAL.has(code) ? cents : cents;
+  if (WHOLE_UNIT_TWO_DECIMAL.has(code)) return cents * 100;
+  return cents;
+}
+
+export function fromUnitAmount(amount, currency) {
+  if (amount === null || amount === undefined) return null;
+  const code = (currency || 'usd').toUpperCase();
+  if (WHOLE_UNIT_TWO_DECIMAL.has(code)) return Math.round(Number(amount) / 100);
+  return Number(amount);
 }
 
 export function appInfoHeader() {
@@ -81,6 +95,45 @@ export function createCheckout({ order, urls, settings }) {
   };
 }
 
+// 第一步：向 Stripe 建立結帳頁，拿回讓使用者去付款的網址。
+// Step one: create the Checkout Session and get the URL the payer is sent to.
+export async function startCheckout({ checkout, fetchImpl = fetch }) {
+  const response = await fetchImpl(checkout.url, {
+    method: 'POST',
+    headers: checkout.headers,
+    body: checkout.body,
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok || !json.id || !json.url) {
+    throw new Error(`stripe session ${response.status}${json?.error?.message ? `: ${json.error.message}` : ''}`);
+  }
+  return { redirectUrl: json.url, remoteId: json.id };
+}
+
+// 第二步：使用者付完回來，我們向 Stripe 查這張結帳單付了沒。不靠 webhook。
+// 受限金鑰要有「Checkout Sessions：讀取」權限。
+// Step two: the payer returns and we ask Stripe whether that session was paid. No webhook needed.
+// The restricted key needs read access to Checkout Sessions.
+export async function completeReturn({ remoteId, settings, fetchImpl = fetch }) {
+  const ids = partnerIds();
+  const response = await fetchImpl(`${API_BASE}/v1/checkout/sessions/${encodeURIComponent(remoteId)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${settings.restrictedKey}`,
+      'X-Stripe-Client-User-Agent': appInfoHeader(),
+      'User-Agent': `${ids.appName}/${ids.appVersion} (${ids.appUrl})`,
+    },
+  });
+  const json = await response.json().catch(() => ({}));
+  const paid = response.ok && json.payment_status === 'paid' && json.status === 'complete';
+  return {
+    paid,
+    providerTxnId: json.payment_intent || remoteId,
+    amountCents: response.ok ? fromUnitAmount(json.amount_total, json.currency) : null,
+    raw: { http: response.status, status: json.status || null, payment_status: json.payment_status || null },
+  };
+}
+
 // Stripe webhook 驗簽：t=時間戳,v1=簽章，簽的是 `${t}.${原始 body}`。
 // Stripe webhook signing: header is t=timestamp,v1=signature over `${t}.${raw body}`.
 export function verifySignature({ rawBody, signatureHeader, secret, toleranceSeconds = 300, now = Date.now() }) {
@@ -118,11 +171,14 @@ export function verifyCallback({ body, rawBody, headers, settings, now }) {
     providerOrderId: object.client_reference_id || object.metadata?.stagerank_order || null,
     providerTxnId: object.payment_intent || object.id || null,
     paid: valid && type === 'checkout.session.completed' && object.payment_status === 'paid',
-    amountCents: object.amount_total ?? null,
+    amountCents: fromUnitAmount(object.amount_total, object.currency),
     message: type || null,
   };
 }
 
 export const callbackAck = JSON.stringify({ received: true });
 
-export default { id, isConfigured, createCheckout, verifyCallback, verifySignature, appInfoHeader, isRestrictedKey, callbackAck };
+export default {
+  id, isConfigured, createCheckout, startCheckout, completeReturn, verifyCallback, verifySignature,
+  appInfoHeader, isRestrictedKey, unitAmount, fromUnitAmount, callbackAck,
+};

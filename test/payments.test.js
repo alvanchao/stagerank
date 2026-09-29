@@ -189,7 +189,9 @@ test('Stripe：受限金鑰與驗簽 / Stripe uses a restricted key and verifies
   const checkout = stripe.createCheckout({ order, urls, settings });
   assert.match(checkout.headers.Authorization, /^Bearer rk_test_/);
   const sent = Object.fromEntries(new URLSearchParams(checkout.body));
-  assert.equal(sent['line_items[0][price_data][unit_amount]'], '1200', 'TWD must not be divided by 100');
+  // Stripe 把 TWD 當兩位小數：NT$1200 要送 120000（官方 currencies 頁「特例」）。
+  // Stripe treats TWD as two-decimal: NT$1200 is sent as 120000 (the docs' "special cases").
+  assert.equal(sent['line_items[0][price_data][unit_amount]'], '120000', 'TWD is sent with two decimals');
   assert.equal(sent['line_items[0][price_data][currency]'], 'twd');
   assert.equal(sent.client_reference_id, 'SRTEST0001');
 

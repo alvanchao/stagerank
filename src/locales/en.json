@@ -215,7 +215,8 @@
   "errors": {
     "notFound": "Page not found",
     "serverError": "Something went wrong",
-    "badRequest": "Invalid data"
+    "badRequest": "Invalid data",
+    "paymentStart": "We could not reach the payment provider to create your order. Your registration is kept as unpaid; please try again shortly or choose another payment method."
   },
   "schedule": {
     "title": "Preparation",

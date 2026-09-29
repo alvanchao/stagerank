@@ -4,6 +4,7 @@ import * as regs from '../services/registrations.js';
 import * as roster from '../services/athletes.js';
 import * as feeGroups from '../services/feeGroups.js';
 import * as payments from '../payments/index.js';
+import * as onlinePay from '../services/onlinePay.js';
 
 const router = express.Router();
 
@@ -113,7 +114,18 @@ router.post('/c/:slug/register', async (req, res, next) => {
       });
     }
 
-    return res.redirect(303, `/pay/${form.provider}/start/${result.registration.id}`);
+    // API 型金流（PayPal、Stripe）：先向對方建立訂單，再把使用者送過去。
+    // API-style providers: create the order with them first, then send the payer over.
+    try {
+      const redirectUrl = await onlinePay.startApi({ provider: form.provider, checkout: result.checkout });
+      return res.redirect(303, redirectUrl);
+    } catch (err) {
+      if (err instanceof onlinePay.PaymentStartError) {
+        res.status(502);
+        return res.renderPage('error', { title: res.locals.t('errors.paymentStart'), messageKey: 'errors.paymentStart' });
+      }
+      throw err;
+    }
   } catch (err) {
     if (err instanceof regs.RegistrationError) {
       res.status(400);

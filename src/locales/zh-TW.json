@@ -215,7 +215,8 @@
   "errors": {
     "notFound": "找不到這個頁面",
     "serverError": "系統發生錯誤",
-    "badRequest": "資料有誤"
+    "badRequest": "資料有誤",
+    "paymentStart": "無法連上付款平台建立訂單，您的報名已保留（未付款）。請稍後再試，或換一種付款方式。"
   },
   "schedule": {
     "title": "賽前準備",

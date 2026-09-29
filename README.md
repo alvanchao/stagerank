@@ -104,6 +104,12 @@ Everything is environment variables — see [`.env.example`](.env.example). Two 
 
 A payment provider stays hidden on the registration form until it is both enabled and fully keyed.
 
+### How each provider completes a payment
+
+- **ECPay, NewebPay** — the payer is sent to the provider's page, and the provider calls back `/pay/<provider>/notify`. The callback is signature-checked (ECPay MAC, NewebPay AES + SHA) before anything is marked paid. The site therefore needs a **publicly reachable `BASE_URL`**.
+- **PayPal** — StageRank creates the order, sends the payer to PayPal to approve, and when the payer returns it **captures the payment itself**; only PayPal answering `COMPLETED` (with a matching amount) marks it paid. No webhook is required. Optionally create a webhook in PayPal and set `PAYPAL_WEBHOOK_ID`: notifications are then confirmed with PayPal's own verification call. Without that ID, webhooks are simply ignored.
+- **Stripe** — StageRank creates a Checkout Session, sends the payer there, and on return **asks Stripe whether the session was paid**. The restricted key (`rk_…`) needs write access to *Checkout Sessions* (to create) and read access (to check). NT$ amounts are converted for Stripe's two-decimal TWD rule.
+
 ## The day, screen by screen
 
 | Who | Where | Passcode |
@@ -189,7 +195,7 @@ Tests need a Postgres at `TEST_DATABASE_URL` (default `postgres://postgres:devpa
 
 Honest list, so nobody is surprised:
 
-- The payment adapters have not yet been run against the providers' sandboxes end to end. The request building and signature checking are unit-tested, but only a sandbox run proves a provider accepts them.
+- Sandbox status: **ECPay and NewebPay** have been run end to end against their sandboxes (order, payment, callback, marked paid). **PayPal and Stripe** are covered by unit and HTTP tests against a fake provider; a real sandbox run is still to be recorded here.
 - ECPay's and NewebPay's platform/partner fields are deliberately left blank, because sending one without a contract can fail the transaction. NewebPay's official manual could not be obtained; whether MPG has a vendor attribution field at all is unconfirmed.
 - The skating system implements the majority rules (majority, count, sum, then the next place) and combines dances by rank sum. Federations differ in the later tie-breaks; check it against your own rulebook before using it for a titled event.
 - The Docker image has not been built on a machine with access to Docker Hub.

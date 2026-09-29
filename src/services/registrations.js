@@ -154,6 +154,8 @@ export async function register({
     await insertMembers(client, registration.id);
 
     const providerOrderId = payments.newOrderId();
+    const adapter = payments.getAdapter(provider);
+    const apiReturn = typeof adapter.completeReturn === 'function';
     const checkout = payments.createCheckout({
       provider,
       order: {
@@ -167,7 +169,12 @@ export async function register({
       },
       urls: {
         notifyUrl: `${process.env.BASE_URL || ''}/pay/${provider}/notify`,
-        returnUrl: `${process.env.BASE_URL || ''}/r/${registration.id}`,
+        // PayPal、Stripe 付完要先回到 /pay/.../return 讓我們向對方查證；綠界、藍新直接回報名頁。
+        // PayPal and Stripe return via /pay/.../return so we can verify with them first; ECPay and
+        // NewebPay go straight back to the registration page.
+        returnUrl: apiReturn
+          ? `${process.env.BASE_URL || ''}/pay/${provider}/return/${registration.id}`
+          : `${process.env.BASE_URL || ''}/r/${registration.id}`,
         cancelUrl: `${process.env.BASE_URL || ''}/r/${registration.id}`,
       },
     });

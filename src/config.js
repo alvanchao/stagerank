@@ -110,6 +110,10 @@ export const config = {
       sandbox: bool(env.PAYPAL_SANDBOX, true),
       clientId: str(env.PAYPAL_CLIENT_ID, ''),
       clientSecret: str(env.PAYPAL_CLIENT_SECRET, ''),
+      // 選填：PayPal 後台建立 webhook 後的 ID。沒填就不採信 webhook，付款靠回程請款完成。
+      // Optional: the id of the webhook created in PayPal. Without it webhooks are not trusted and
+      // payment completes through the return capture.
+      webhookId: str(env.PAYPAL_WEBHOOK_ID, ''),
     },
     stripe: {
       enabled: bool(env.STRIPE_ENABLED, false),
