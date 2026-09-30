@@ -11,7 +11,8 @@ import QRCode from 'qrcode';
 import * as setup from '../services/setup.js';
 import { providerStatus } from '../payments/index.js';
 import { clearSessions } from '../middleware/identity.js';
-import { requireStaff as requireAdmin, safeEqual, STAFF_COOKIE as COOKIE } from '../middleware/auth.js';
+import crypto from 'node:crypto';
+import { requireStaff as requireAdmin, safeEqual, makeAdminSession, readCookie, STAFF_COOKIE as COOKIE } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -35,6 +36,81 @@ router.post('/login', (req, res) => {
   );
   clearSessions(res, 'admin');
   return res.redirect(303, '/admin');
+});
+
+// ---- Google 登入 / Sign in with Google ----
+// Google 只證明信箱；名單（ADMIN_EMAILS）才決定誰是主辦。
+// Google only proves the email; the list (ADMIN_EMAILS) decides who is an organiser.
+const OAUTH_COOKIE = 'stagerank_oauth';
+
+function finishGoogleLogin(res, email) {
+  const clean = String(email || '').trim().toLowerCase();
+  if (!clean || !config.adminEmails.includes(clean)) {
+    res.status(403);
+    return res.renderPage('admin_login', {
+      title: res.locals.t('admin.title'), hasToken: Boolean(config.adminToken), error: 'admin.googleNotListed',
+    });
+  }
+  res.append('Set-Cookie', `${COOKIE}=${encodeURIComponent(makeAdminSession(clean))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200`);
+  clearSessions(res, 'admin');
+  return res.redirect(303, '/admin');
+}
+
+router.get('/google', (req, res) => {
+  const google = config.google;
+  if (!google.enabled) return res.redirect(303, '/admin');
+  if (!google.real) {
+    // 假 Google：自己輸入信箱，當成 Google 回覆的結果。
+    // Pretend Google: type an email, treated as Google's answer.
+    return res.renderPage('admin_google_mock', { title: res.locals.t('admin.googleMockTitle') });
+  }
+  const state = crypto.randomBytes(16).toString('hex');
+  res.append('Set-Cookie', `${OAUTH_COOKIE}=${state}; Path=/admin; HttpOnly; SameSite=Lax; Max-Age=600`);
+  const params = new URLSearchParams({
+    client_id: google.clientId,
+    redirect_uri: `${config.baseUrl}/admin/google/callback`,
+    response_type: 'code',
+    scope: 'openid email',
+    state,
+    prompt: 'select_account',
+  });
+  return res.redirect(303, `https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+router.post('/google/mock', (req, res) => {
+  if (!config.google.mock || config.google.real) return res.redirect(303, '/admin');
+  return finishGoogleLogin(res, req.body.email);
+});
+
+router.get('/google/callback', async (req, res, next) => {
+  try {
+    const google = config.google;
+    const state = readCookie(req.headers.cookie, OAUTH_COOKIE);
+    if (!google.real || !state || !req.query.code || !safeEqual(String(req.query.state || ''), state)) {
+      return res.redirect(303, '/admin');
+    }
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: String(req.query.code),
+        client_id: google.clientId,
+        client_secret: google.clientSecret,
+        redirect_uri: `${config.baseUrl}/admin/google/callback`,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const body = await response.json();
+    // id_token 是 Google 經 TLS 直接回給伺服器的，這裡只讀內容並核對對象與信箱驗證。
+    // The id_token came straight from Google over TLS to this server; check audience and verified email.
+    const claims = body.id_token ? JSON.parse(Buffer.from(body.id_token.split('.')[1], 'base64url').toString()) : {};
+    if (!response.ok || claims.aud !== google.clientId || claims.email_verified !== true) {
+      return res.redirect(303, '/admin');
+    }
+    return finishGoogleLogin(res, claims.email);
+  } catch (err) {
+    return next(err);
+  }
 });
 
 // 建立比賽。主辦裝好程式之後的第一步，以前只能靠程式建。

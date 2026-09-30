@@ -1,6 +1,5 @@
-import config from '../config.js';
 import {
-  STAFF_COOKIE, STAFF_SESSION_COOKIE, JUDGE_COOKIE, readCookie, safeEqual,
+  STAFF_COOKIE, STAFF_SESSION_COOKIE, JUDGE_COOKIE, readCookie, adminFromCookie,
 } from './auth.js';
 import * as entrants from '../services/entrants.js';
 
@@ -21,9 +20,9 @@ export async function attachIdentity(req, res, next) {
   res.locals.identity = null;
   try {
     const cookies = req.headers.cookie;
-    const token = readCookie(cookies, STAFF_COOKIE);
-    if (config.adminToken && token && safeEqual(token, config.adminToken)) {
-      res.locals.identity = { kind: 'admin', home: '/admin' };
+    const admin = adminFromCookie(cookies);
+    if (admin) {
+      res.locals.identity = { kind: 'admin', home: '/admin', email: admin.email || null };
       return next();
     }
     const { fromCookie } = await import('../services/staffCodes.js');

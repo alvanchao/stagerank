@@ -57,3 +57,50 @@ test('首頁與比賽頁不顯示金額 / no fee on home or competition header',
   const page = await (await http.get(`/c/${c.slug}`)).text();
   assert.doesNotMatch(page, /competition-fee|報名費: /);
 });
+
+test('假 Google 登入：名單內才進得去 / pretend Google: only listed emails get in', async () => {
+  const { config } = await import('../src/config.js');
+  const before = { mock: config.google.mock, emails: config.adminEmails };
+  config.google.mock = true;
+  config.adminEmails = ['boss@example.com'];
+  try {
+    const page = await (await http.get('/admin')).text();
+    assert.match(page, /href="\/admin\/google"/);
+    assert.equal((await http.get('/admin/google')).status, 200);
+
+    const bad = await http.postForm('/admin/google/mock', { email: 'stranger@example.com' });
+    assert.equal(bad.status, 403);
+    assert.doesNotMatch(bad.headers.get('set-cookie') || '', /stagerank_admin=g\./);
+
+    const ok = await http.postForm('/admin/google/mock', { email: 'Boss@Example.com' });
+    assert.equal(ok.status, 303);
+    const cookie = ok.headers.get('set-cookie').split(';')[0];
+    assert.match(cookie, /^stagerank_admin=g\./);
+    const inside = await http.get('/admin', { headers: { cookie } });
+    assert.doesNotMatch(await inside.text(), /name="token"/);
+
+    // 偽造或改信箱都不行 / a forged or altered cookie is refused
+    const forged = cookie.replace(/=g\.[^.]+/, `=g.${Buffer.from('stranger@example.com').toString('base64url')}`);
+    assert.match(await (await http.get('/admin', { headers: { cookie: forged } })).text(), /name="token"/);
+
+    // 名單拿掉信箱，登入立刻失效 / removing the email from the list ends the session
+    config.adminEmails = [];
+    assert.match(await (await http.get('/admin', { headers: { cookie } })).text(), /name="token"/);
+  } finally {
+    config.google.mock = before.mock;
+    config.adminEmails = before.emails;
+  }
+});
+
+test('正式模式不啟用假 Google / mock is refused in production', async () => {
+  const { config } = await import('../src/config.js');
+  const before = config.google.mock;
+  config.google.mock = false;
+  try {
+    const res = await http.postForm('/admin/google/mock', { email: 'boss@example.com' });
+    assert.equal(res.status, 303);
+    assert.doesNotMatch(res.headers.get('set-cookie') || '', /stagerank_admin=g\./);
+  } finally {
+    config.google.mock = before;
+  }
+});

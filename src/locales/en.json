@@ -221,7 +221,13 @@
     "noFeeGroup": "No plan",
     "feeTiered": "Follow a plan (base plus extras)",
     "feeGroupPickHint": "A division following a plan takes its price from the plan; the entry fee above is ignored.",
-    "tieredNeedsGroup": "Set to follow a plan, but no plan chosen."
+    "tieredNeedsGroup": "Set to follow a plan, but no plan chosen.",
+    "googleSignIn": "Sign in with Google",
+    "googleNote": "Google only proves you own this email; all competition data stays in this site's own database.",
+    "googleMockWarn": "Pretend-Google test mode: any listed email signs in. For development and tests only.",
+    "googleMockTitle": "Pretend Google sign-in (test)",
+    "googleMockEmail": "Email",
+    "googleNotListed": "This email is not on the organiser list."
   },
   "errors": {
     "notFound": "Page not found",
@@ -432,13 +438,19 @@
       "emailTaken": "That email is already registered. Please sign in.",
       "passwordTooShort": "The password needs at least {min} characters.",
       "badCredentials": "That email or password is wrong.",
-      "linkInvalid": "This sign-in link has already been used or has expired. Please ask for a new one."
+      "linkInvalid": "This sign-in link has already been used or has expired. Please ask for a new one.",
+      "codeInvalid": "That code is wrong, already used or expired. Please request a new one."
     },
     "linkSentIfExists": "If this address is registered, we have sent a sign-in link.",
     "linkSentHint": "Check your inbox. The link works for {minutes} minutes and only once. If it does not arrive, look in spam; you can ask again after a minute.",
     "linkConfirm": "Press the button to sign in.",
     "sendNewLink": "Send me a new sign-in link",
-    "mailLoginHint": "Enter your email and we will send you a sign-in link. No password needed."
+    "mailLoginHint": "Enter your email and we will send you a 6-digit code. No password needed.",
+    "codeSentIfExists": "If this email is registered, we have sent a 6-digit code.",
+    "codeLabel": "Enter the 6-digit code from the email",
+    "codeHint": "The code is good for {minutes} minutes, works once, and is void after 5 wrong tries. Check your spam folder; you can ask for a new one after a minute.",
+    "sendNewCode": "Send a new code",
+    "codePretend": "Test mode: no email was sent. The code is {code}. A live site sends it to the mailbox instead."
   },
   "roster": {
     "title": "Roster",
@@ -722,6 +734,10 @@
     "loginLink": {
       "subject": "Your {site} sign-in link",
       "body": "Hello,\n\nUse the link below to sign in to {site} (valid for {minutes} minutes, single use):\n\n{link}\n\nIf you did not ask for this, just ignore this message."
+    },
+    "loginCode": {
+      "subject": "{site} sign-in code",
+      "body": "Hello,\n\nYour {site} sign-in code is:\n\n{code}\n\nIt is good for {minutes} minutes and works once. If this was not you, ignore this mail and never share the code."
     }
   }
 }

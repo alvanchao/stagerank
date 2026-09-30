@@ -221,7 +221,13 @@
     "noFeeGroup": "不使用方案",
     "feeTiered": "照方案（基本盤＋加項）",
     "feeGroupPickHint": "選了「照方案」的組別，價格由方案決定，上面的報名費就不看了。",
-    "tieredNeedsGroup": "選了照方案，但還沒挑方案。"
+    "tieredNeedsGroup": "選了照方案，但還沒挑方案。",
+    "googleSignIn": "用 Google 登入",
+    "googleNote": "Google 只證明你是這個信箱的主人，比賽資料都留在本站自己的資料庫。",
+    "googleMockWarn": "目前是「假 Google」測試模式：輸入名單內的信箱就能登入，只能用在開發與測試。",
+    "googleMockTitle": "假 Google 登入（測試）",
+    "googleMockEmail": "信箱",
+    "googleNotListed": "這個信箱不在主辦名單內。"
   },
   "errors": {
     "notFound": "找不到這個頁面",
@@ -432,13 +438,19 @@
       "emailTaken": "這個電子郵件已經註冊過了，請直接登入。",
       "passwordTooShort": "密碼至少要 {min} 個字。",
       "badCredentials": "電子郵件或密碼不對。",
-      "linkInvalid": "這條登入連結已經用過或已過期，請重新申請。"
+      "linkInvalid": "這條登入連結已經用過或已過期，請重新申請。",
+      "codeInvalid": "驗證碼不對、已用過或已過期，請重新申請。"
     },
     "linkSentIfExists": "如果這個信箱已註冊，我們已寄出登入連結",
     "linkSentHint": "請到信箱收信，連結 {minutes} 分鐘內有效，只能用一次。沒收到請看垃圾信件匣，稍等一分鐘後可以再申請。",
     "linkConfirm": "按下按鈕就會登入。",
     "sendNewLink": "重新寄一封登入連結",
-    "mailLoginHint": "輸入信箱，我們會寄一條登入連結給您，不需要密碼。"
+    "mailLoginHint": "輸入信箱，我們會寄一組 6 位數驗證碼給您，不需要密碼。",
+    "codeSentIfExists": "如果這個信箱已註冊，我們已寄出 6 位數驗證碼。",
+    "codeLabel": "請輸入信裡的 6 位數驗證碼",
+    "codeHint": "驗證碼 {minutes} 分鐘內有效，只能用一次，輸入錯誤 5 次就作廢。沒收到請看垃圾信件匣，稍等一分鐘後可以重新申請。",
+    "sendNewCode": "重新寄一組驗證碼",
+    "codePretend": "測試模式：信件沒有真的寄出，驗證碼是 {code}。正式上線會改成寄到信箱。"
   },
   "roster": {
     "title": "選手名冊",
@@ -722,6 +734,10 @@
     "loginLink": {
       "subject": "{site} 登入連結",
       "body": "您好，\n\n請點下面的連結登入 {site}（{minutes} 分鐘內有效，只能使用一次）：\n\n{link}\n\n如果不是您本人操作，請直接忽略這封信。"
+    },
+    "loginCode": {
+      "subject": "{site} 登入驗證碼",
+      "body": "您好，\n\n您的 {site} 登入驗證碼是：\n\n{code}\n\n{minutes} 分鐘內有效，只能使用一次。如果不是您本人操作，請直接忽略這封信，也不要把驗證碼告訴任何人。"
     }
   }
 }

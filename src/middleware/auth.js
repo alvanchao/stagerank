@@ -20,6 +20,32 @@ export function readCookie(header, name) {
   return undefined;
 }
 
+// Google 登入的主辦：簽章 cookie，內容是信箱與簽發時間。
+// A Google-signed-in organiser: a signed cookie holding the email and the issue time.
+const ADMIN_SESSION_MS = 12 * 60 * 60 * 1000;
+const sign = (payload) => crypto.createHmac('sha256', config.sessionSecret).update(payload).digest('base64url');
+
+export function makeAdminSession(email) {
+  const payload = `g.${Buffer.from(String(email).toLowerCase()).toString('base64url')}.${Date.now().toString(36)}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+// 主辦身分的唯一判斷處：通行碼，或名單內信箱的 Google 登入。
+// The single place that decides "is this the organiser": the passcode, or a listed Google email.
+export function adminFromCookie(header) {
+  const value = readCookie(header, STAFF_COOKIE);
+  if (!value) return null;
+  if (config.adminToken && safeEqual(value, config.adminToken)) return { kind: 'token' };
+  const parts = value.split('.');
+  if (parts.length !== 4 || parts[0] !== 'g') return null;
+  const payload = parts.slice(0, 3).join('.');
+  if (!safeEqual(parts[3], sign(payload))) return null;
+  const issued = Number.parseInt(parts[2], 36);
+  if (!Number.isFinite(issued) || Date.now() - issued > ADMIN_SESSION_MS) return null;
+  const email = Buffer.from(parts[1], 'base64url').toString();
+  return config.adminEmails.includes(email) ? { kind: 'google', email } : null;
+}
+
 export const STAFF_SESSION_COOKIE = 'stagerank_staff';
 
 // 主辦通行碼（全站唯一，放環境變數）可以進所有工作人員畫面；
@@ -31,8 +57,7 @@ export function requireRole(...roles) {
   return async (req, res, next) => {
     try {
       const cookies = req.headers.cookie;
-      const token = readCookie(cookies, STAFF_COOKIE);
-      if (config.adminToken && token && safeEqual(token, config.adminToken)) {
+      if (adminFromCookie(cookies)) {
         req.staffRole = 'admin';
         return next();
       }
@@ -66,12 +91,10 @@ export function requireRole(...roles) {
 // 只限主辦。
 // Organiser only.
 export function requireStaff(req, res, next) {
-  if (!config.adminToken) {
-    return res.renderPage('admin_login', { title: res.locals.t('admin.title'), hasToken: false, error: null });
-  }
-  const token = readCookie(req.headers.cookie, STAFF_COOKIE);
-  if (token && safeEqual(token, config.adminToken)) return next();
-  return res.renderPage('admin_login', { title: res.locals.t('admin.title'), hasToken: true, error: null });
+  if (adminFromCookie(req.headers.cookie)) return next();
+  return res.renderPage('admin_login', {
+    title: res.locals.t('admin.title'), hasToken: Boolean(config.adminToken), error: null,
+  });
 }
 
 // 報名人的登入狀態：每個畫面都想知道「現在是誰」，所以在這裡讀一次就好。
@@ -108,6 +131,8 @@ export default {
   requireEntrant,
   safeEqual,
   readCookie,
+  adminFromCookie,
+  makeAdminSession,
   STAFF_COOKIE,
   STAFF_SESSION_COOKIE,
   JUDGE_COOKIE,

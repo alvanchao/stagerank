@@ -4,13 +4,22 @@
     <p><%= t('staffApp.needLogin') %></p>
     <p><a class="btn" href="/staff/app"><%= t('staffApp.openApp') %></a></p>
   </div>
-<% } else if (!hasToken) { %>
+<% } else if (!hasToken && !config.google.enabled) { %>
   <div class="notice bad"><%= t('admin.tokenMissing') %></div>
 <% } else { %>
   <% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+  <% if (config.google.enabled) { %>
+    <div class="card">
+      <p><a class="btn" href="/admin/google"><%= t('admin.googleSignIn') %></a></p>
+      <p class="small muted"><%= t('admin.googleNote') %></p>
+      <% if (config.google.mock) { %><p class="small bad"><%= t('admin.googleMockWarn') %></p><% } %>
+    </div>
+  <% } %>
+  <% if (hasToken) { %>
   <form class="card" method="post" action="/admin/login">
     <label for="token"><%= t('admin.tokenPrompt') %></label>
     <input id="token" type="text" name="token" autocomplete="off" required>
     <p style="margin-top:16px"><button type="submit"><%= t('common.confirm') %></button></p>
   </form>
+  <% } %>
 <% } %>

@@ -1,5 +1,5 @@
-// 免密碼登入連結（寄信模式，用記憶體信箱）。
-// Passwordless email login links (mail mode, in-memory outbox).
+// 信箱驗證碼登入（寄信模式，用記憶體信箱）。
+// Email code sign-in (mail mode, in-memory outbox).
 import { resetDatabase, startServer, makeEntrant } from './helpers.js';
 import test, { before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,9 +27,8 @@ beforeEach(async () => {
   config.mail.setMode('memory');
 });
 
-const SENT = translate('zh-TW', 'entrant.linkSentIfExists');
-const linkOf = (mail) => mail.text.match(/https?:\/\/\S+\/entrant\/link\?\S+/)[0];
-const pathOf = (link) => link.replace(/^https?:\/\/[^/]+/, '');
+const SENT = translate('zh-TW', 'entrant.codeSentIfExists');
+const codeOf = (mail) => mail.text.match(/\b(\d{6})\b/)[1];
 const cookieOf = (res) => (res.headers.get('set-cookie') || '').split(';')[0];
 
 test('設定：NODE_ENV=test 本身不開寄信，memory 要明確設定 / mail is off under NODE_ENV=test until memory is chosen', () => {
@@ -68,13 +67,16 @@ test('寄信模式的畫面：註冊只問信箱，沒有密碼欄 / in mail mod
   assert.match(await (await http.get('/entrant/login')).text(), /type="password"/);
 });
 
-test('完整流程：註冊 → 信箱有連結 → GET 只確認 → POST 登入 → 不能再用 / full flow, single use', async () => {
+test('完整流程：註冊 → 信箱有 6 位數 → 輸入登入 → 不能再用 / full flow, single use', async () => {
   const res = await http.postForm('/entrant/signup', {
     email: 'Teacher@Example.com', unitName: 'Sunrise Dance', contactName: 'Contact', phone: '0900',
   });
   assert.equal(res.status, 200);
   assert.ok(!res.headers.get('set-cookie'), 'signing up does not sign in');
-  assert.match(await res.text(), new RegExp(SENT));
+  const page = await res.text();
+  assert.match(page, new RegExp(SENT));
+  assert.match(page, /name="code"/);
+  assert.ok(!page.includes('id="pretendCode"'), 'a real (memory) mailbox never shows the code on screen');
 
   const entrant = await entrants.findByEmail('teacher@example.com');
   assert.equal(entrant.unit_name, 'Sunrise Dance');
@@ -84,64 +86,56 @@ test('完整流程：註冊 → 信箱有連結 → GET 只確認 → POST 登�
   const mail = mailer.outbox[0];
   assert.equal(mail.to, 'teacher@example.com');
   assert.match(mail.subject, /Test Cup/);
-  assert.match(mail.text, /15/);
-  const link = linkOf(mail);
-  assert.ok(link.startsWith(`${config.baseUrl}/entrant/link?token=`));
+  assert.match(mail.text, /10/);
+  const code = codeOf(mail);
+  assert.match(code, /^\d{6}$/);
 
-  // 只存雜湊：資料庫裡找不到明文 token。
-  // Only the hash is stored: the plain token is nowhere in the database.
-  const token = new URL(link).searchParams.get('token');
-  const rows = (await query('SELECT * FROM login_links')).rows;
+  // 只存雜湊：資料庫裡找不到明文碼。
+  // Only the hash is stored: the plain code is nowhere in the database.
+  const rows = (await query('SELECT * FROM login_codes')).rows;
   assert.equal(rows.length, 1);
-  assert.ok(!JSON.stringify(rows).includes(token));
-  assert.match(rows[0].token_hash, /^[0-9a-f]{64}$/);
+  assert.ok(!JSON.stringify(rows).includes(code));
+  assert.match(rows[0].code_hash, /^[0-9a-f]{64}$/);
 
-  // GET（信箱預覽機器人做的事）只顯示按鈕，不登入、不消耗。
-  // GET, which is all a link-preview bot does, only shows the button: no sign-in, nothing consumed.
-  for (let i = 0; i < 2; i += 1) {
-    const page = await http.get(pathOf(link));
-    assert.equal(page.status, 200);
-    assert.ok(!page.headers.get('set-cookie'));
-    const html = await page.text();
-    assert.match(html, /method="post" action="\/entrant\/link"/);
-    assert.match(html, /<button type="submit">登入<\/button>/);
-  }
-  assert.equal((await one('SELECT used_at FROM login_links')).used_at, null);
-
-  const login = await http.postForm('/entrant/link', { token, next: '' });
+  const login = await http.postForm('/entrant/code', { email: 'teacher@example.com', code, next: '' });
   assert.equal(login.status, 303);
   assert.equal(login.headers.get('location'), '/entrant');
   const cookie = cookieOf(login);
   assert.match(cookie, /^stagerank_entrant=/);
   assert.equal((await http.get('/entrant', { headers: { cookie } })).status, 200, 'the cookie signs in');
 
-  // 用過的連結：GET 顯示失效，POST 拒絕。
-  // A used link: GET says it is dead, POST refuses.
-  const again = await http.get(pathOf(link));
-  assert.equal(again.status, 400);
-  assert.match(await again.text(), /已經用過或已過期/);
-  const replay = await http.postForm('/entrant/link', { token });
+  const replay = await http.postForm('/entrant/code', { email: 'teacher@example.com', code });
   assert.equal(replay.status, 400);
   assert.ok(!replay.headers.get('set-cookie'));
 });
 
-test('連結過期就不能用 / an expired link is refused', async () => {
+test('錯誤、過期、錯 5 次作廢 / wrong, expired, and void after five wrong tries', async () => {
   await makeEntrant({ email: 'late@example.com' });
   await http.postForm('/entrant/login', { email: 'late@example.com' });
-  const link = linkOf(mailer.outbox[0]);
-  const token = new URL(link).searchParams.get('token');
-  await query("UPDATE login_links SET expires_at = now() - interval '1 minute'");
+  const code = codeOf(mailer.outbox[0]);
+  const wrong = code === '000000' ? '111111' : '000000';
 
-  assert.equal((await http.get(pathOf(link))).status, 400);
-  const res = await http.postForm('/entrant/link', { token });
-  assert.equal(res.status, 400);
-  assert.ok(!res.headers.get('set-cookie'));
+  const bad = await http.postForm('/entrant/code', { email: 'late@example.com', code: wrong });
+  assert.equal(bad.status, 400);
+  assert.ok(!bad.headers.get('set-cookie'));
+  assert.match(await bad.text(), /驗證碼不對/);
+  for (const junk of ['', 'abc', '12345', '1234567']) {
+    assert.equal((await http.postForm('/entrant/code', { email: 'late@example.com', code: junk })).status, 400);
+  }
+  assert.equal((await http.postForm('/entrant/code', { email: 'nobody@example.com', code })).status, 400);
 
-  // 亂寫的 token 一樣。
-  // A made-up token too.
-  assert.equal((await http.postForm('/entrant/link', { token: 'nope' })).status, 400);
-  assert.equal((await http.postForm('/entrant/link', {})).status, 400);
-  assert.equal((await http.get('/entrant/link')).status, 400);
+  // 再錯到 5 次，連對的碼也作廢。
+  // Reaching five wrong tries voids even the right code.
+  for (let i = 0; i < 4; i += 1) await http.postForm('/entrant/code', { email: 'late@example.com', code: wrong });
+  const voided = await http.postForm('/entrant/code', { email: 'late@example.com', code });
+  assert.equal(voided.status, 400, 'the right code no longer works');
+
+  await query('DELETE FROM login_codes');
+  await query("UPDATE login_codes SET created_at = now()");
+  await http.postForm('/entrant/login', { email: 'late@example.com' });
+  const fresh = codeOf(mailer.outbox[mailer.outbox.length - 1]);
+  await query("UPDATE login_codes SET expires_at = now() - interval '1 minute'");
+  assert.equal((await http.postForm('/entrant/code', { email: 'late@example.com', code: fresh })).status, 400, 'expired');
 });
 
 test('登入頁只問信箱，永遠同一句話，不洩漏誰註冊過 / login answers identically for known and unknown addresses', async () => {
@@ -154,13 +148,14 @@ test('登入頁只問信箱，永遠同一句話，不洩漏誰註冊過 / login
     assert.equal(res.status, 200);
     assert.match(await res.clone().text(), new RegExp(SENT));
   }
-  assert.equal(await known.text(), await unknown.text(), 'byte-identical pages');
+  const strip = (html) => html.replace(/value="[^"]*"/g, 'value=""');
+  assert.equal(strip(await known.text()), strip(await unknown.text()), 'identical pages apart from the echoed email');
   assert.equal(mailer.outbox.length, 1, 'only the real account got a mail');
   assert.equal(mailer.outbox[0].to, 'known@example.com');
   assert.equal(await entrants.findByEmail('stranger@example.com'), null, 'login never creates an account');
 });
 
-test('註冊已存在的信箱：看不出差別，只寄連結，不動原帳號 / signing up an existing address looks the same and changes nothing', async () => {
+test('註冊已存在的信箱：看不出差別，只寄碼，不動原帳號 / signing up an existing address looks the same and changes nothing', async () => {
   const before = await makeEntrant({ email: 'dupe@example.com', unitName: 'Original Unit' });
   const res = await http.postForm('/entrant/signup', { email: 'dupe@example.com', unitName: 'Hijack Attempt' });
   assert.equal(res.status, 200);
@@ -183,12 +178,10 @@ test('頻率限制：同一個信箱 60 秒內最多一封 / at most one mail pe
   }
   assert.equal(mailer.outbox.length, 1);
 
-  // 別的信箱不受影響；一分鐘過後可以再寄。
-  // Another address is unaffected; after a minute it can be mailed again.
   await makeEntrant({ email: 'other@example.com' });
   await http.postForm('/entrant/login', { email: 'other@example.com' });
   assert.equal(mailer.outbox.length, 2);
-  await query("UPDATE login_links SET created_at = now() - interval '61 seconds'");
+  await query("UPDATE login_codes SET created_at = now() - interval '61 seconds'");
   await http.postForm('/entrant/login', { email: 'busy@example.com' });
   assert.equal(mailer.outbox.length, 3);
   assert.equal(mailer.outbox[2].to, 'busy@example.com');
@@ -196,21 +189,16 @@ test('頻率限制：同一個信箱 60 秒內最多一封 / at most one mail pe
 
 test('next：登入後回到原本要去的頁面，但只限本站路徑 / next is honoured for local paths only', async () => {
   await makeEntrant({ email: 'next@example.com' });
-  await http.postForm('/entrant/login', { email: 'next@example.com', next: '/c/some-cup' });
-  const link = linkOf(mailer.outbox[0]);
-  assert.match(link, /next=%2Fc%2Fsome-cup/);
-  const page = await (await http.get(pathOf(link))).text();
+  const page = await (await http.postForm('/entrant/login', { email: 'next@example.com', next: '/c/some-cup' })).text();
   assert.match(page, /name="next" value="\/c\/some-cup"/);
-  const token = new URL(link).searchParams.get('token');
-  const res = await http.postForm('/entrant/link', { token, next: '/c/some-cup' });
+  const res = await http.postForm('/entrant/code', { email: 'next@example.com', code: codeOf(mailer.outbox[0]), next: '/c/some-cup' });
   assert.equal(res.headers.get('location'), '/c/some-cup');
 
   mailer.outbox.clear();
-  await query('DELETE FROM login_links');
-  await http.postForm('/entrant/login', { email: 'next@example.com', next: 'https://evil.example/' });
-  assert.ok(!linkOf(mailer.outbox[0]).includes('next='), 'an off-site next never enters the link');
-  const t2 = new URL(linkOf(mailer.outbox[0])).searchParams.get('token');
-  const evil = await http.postForm('/entrant/link', { token: t2, next: '//evil.example' });
+  await query('DELETE FROM login_codes');
+  const evilPage = await (await http.postForm('/entrant/login', { email: 'next@example.com', next: 'https://evil.example/' })).text();
+  assert.ok(!evilPage.includes('evil.example'), 'an off-site next never enters the page');
+  const evil = await http.postForm('/entrant/code', { email: 'next@example.com', code: codeOf(mailer.outbox[0]), next: '//evil.example' });
   assert.equal(evil.headers.get('location'), '/entrant');
 });
 
@@ -218,24 +206,42 @@ test('信件語言跟著請求語言 / the mail follows the request locale', asy
   await makeEntrant({ email: 'lang@example.com' });
   await http.postForm('/entrant/login?lang=en', { email: 'lang@example.com' }, { headers: { 'accept-language': 'en' } });
   const mail = mailer.outbox[0];
-  assert.match(mail.subject, /sign-in link/);
+  assert.match(mail.subject, /sign-in code/);
   assert.match(mail.text, /Hello/);
   assert.ok(!/[一-鿿]/.test(mail.text));
 
   mailer.outbox.clear();
-  await query('DELETE FROM login_links');
+  await query('DELETE FROM login_codes');
   await http.postForm('/entrant/login', { email: 'lang@example.com' }, { headers: { 'accept-language': 'zh-TW' } });
-  assert.match(mailer.outbox[0].text, /請點下面的連結/);
+  assert.match(mailer.outbox[0].text, /登入驗證碼/);
 });
 
-test('連結登入會解除「必須改密碼」 / signing in by link lifts a forced password change', async () => {
+test('用碼登入會解除「必須改密碼」 / signing in by code lifts a forced password change', async () => {
   const who = await makeEntrant({ email: 'reset@example.com' });
   await entrants.resetPassword(who.entrant.id);
   await http.postForm('/entrant/login', { email: 'reset@example.com' });
-  const token = new URL(linkOf(mailer.outbox[0])).searchParams.get('token');
-  const login = await http.postForm('/entrant/link', { token });
+  const login = await http.postForm('/entrant/code', { email: 'reset@example.com', code: codeOf(mailer.outbox[0]) });
   assert.equal((await entrants.getEntrant(who.entrant.id)).must_change_password, false);
   assert.equal((await http.get('/entrant', { headers: { cookie: cookieOf(login) } })).status, 200);
+});
+
+test('假裝寄信：驗證碼直接顯示在畫面上，且標明是測試 / pretend mode shows the code on screen, labelled as a test', async () => {
+  config.mail.setMode('pretend');
+  assert.equal(config.mail.enabled, true);
+  assert.equal(config.mail.pretend, true);
+  await makeEntrant({ email: 'fake@example.com' });
+  const page = await (await http.postForm('/entrant/login', { email: 'fake@example.com' })).text();
+  assert.match(page, /id="pretendCode"/);
+  assert.match(page, /測試模式/);
+  const code = page.match(/驗證碼是 (\d{6})/)[1];
+  const login = await http.postForm('/entrant/code', { email: 'fake@example.com', code });
+  assert.equal(login.status, 303);
+  assert.match(cookieOf(login), /^stagerank_entrant=/);
+
+  // 不存在的信箱沒有碼可顯示。
+  // An unknown address has no code to show.
+  const unknown = await (await http.postForm('/entrant/login', { email: 'ghost@example.com' })).text();
+  assert.ok(!unknown.includes('id="pretendCode"'));
 });
 
 test('密碼模式不受影響 / password mode is untouched when mail is off', async () => {

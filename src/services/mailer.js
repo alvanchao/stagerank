@@ -35,7 +35,7 @@ export function isEnabled() {
 export async function sendMail({ to, subject, text }) {
   const mode = config.mail.mode;
   if (!to || !subject || !text) throw new Error('sendMail needs to, subject and text');
-  if (mode === 'memory') {
+  if (mode === 'memory' || mode === 'pretend') {
     outbox.push({ to, subject, text, at: new Date() });
     return { mode, queued: true };
   }

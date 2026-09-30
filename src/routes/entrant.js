@@ -5,6 +5,7 @@ import express from 'express';
 import * as entrants from '../services/entrants.js';
 import * as roster from '../services/athletes.js';
 import * as regs from '../services/registrations.js';
+import * as loginCodes from '../services/loginCodes.js';
 import * as loginLinks from '../services/loginLinks.js';
 import config from '../config.js';
 import { requireEntrant } from '../middleware/auth.js';
@@ -36,15 +37,23 @@ router.get('/entrant/signup', (req, res) => {
 // 寄信模式：註冊只要信箱，連結寄到信箱；畫面對「新註冊」和「本來就有」一模一樣。
 // Mail mode: signing up takes only an email address and the link goes to the mailbox; the screen is
 // identical for "new" and "already registered".
-async function sendLinkAndAnswer(req, res, entrant) {
+async function sendCodeAndAnswer(req, res, entrant, { error = null, status = 200 } = {}) {
+  let pretendCode = null;
   try {
-    await loginLinks.requestLink({ entrant, t: res.locals.t, next: req.body.next });
+    const result = await loginCodes.requestCode({ entrant, t: res.locals.t });
+    if (config.mail.pretend && result.sent) pretendCode = result.code;
   } catch (err) {
     // 寄不出去也不告訴使用者，免得從錯誤猜出帳號存不存在；只記在伺服器。
     // A failed send is not shown either, so an error cannot reveal whether the account exists.
-    console.error('[stagerank] login link mail failed:', err.message);
+    console.error('[stagerank] login code mail failed:', err.message);
   }
-  return res.renderPage('entrant_link_sent', { title: res.locals.t('entrant.signIn') });
+  return res.status(status).renderPage('entrant_code', {
+    title: res.locals.t('entrant.signIn'),
+    error,
+    email: String(req.body.email || '').trim(),
+    next: loginLinks.safeNext(req.body.next) || '',
+    pretendCode,
+  });
 }
 
 router.post('/entrant/signup', async (req, res, next) => {
@@ -56,7 +65,7 @@ router.post('/entrant/signup', async (req, res, next) => {
         contactName: req.body.contactName,
         phone: req.body.phone,
       });
-      return await sendLinkAndAnswer(req, res, entrant);
+      return await sendCodeAndAnswer(req, res, entrant);
     }
     const entrant = await entrants.signUp({
       email: req.body.email,
@@ -99,7 +108,7 @@ router.post('/entrant/login', async (req, res, next) => {
     // Mail mode: ask only for the email, always answer with the same words; mail only if the account exists.
     if (config.mail.enabled) {
       const entrant = await entrants.findByEmail(req.body.email);
-      return await sendLinkAndAnswer(req, res, entrant);
+      return await sendCodeAndAnswer(req, res, entrant);
     }
     const entrant = await entrants.signIn({ email: req.body.email, password: req.body.password });
     res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
@@ -139,6 +148,28 @@ router.get('/entrant/link', async (req, res, next) => {
       token,
       next: loginLinks.safeNext(req.query.next) || '',
     });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/entrant/code', async (req, res, next) => {
+  try {
+    const entrant = await entrants.findByEmail(req.body.email);
+    const signedIn = await loginCodes.verifyCode({ entrant, code: req.body.code });
+    if (!signedIn) {
+      res.status(400);
+      return res.renderPage('entrant_code', {
+        title: res.locals.t('entrant.signIn'),
+        error: 'entrant.errors.codeInvalid',
+        email: String(req.body.email || '').trim(),
+        next: loginLinks.safeNext(req.body.next) || '',
+        pretendCode: null,
+      });
+    }
+    res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(signedIn.id), COOKIE_OPTIONS);
+    clearSessions(res, 'entrant');
+    return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
   } catch (err) {
     return next(err);
   }

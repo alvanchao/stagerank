@@ -1,0 +1,17 @@
+<h1><%= t('entrant.signIn') %></h1>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+<div class="notice" id="codeSent"><%= t('entrant.codeSentIfExists') %></div>
+<% if (pretendCode) { %>
+  <%# 假裝寄信：信沒有真的寄出，驗證碼直接顯示在這裡。只用於測試。 %>
+  <%# Pretend mail: nothing was really sent, so the code is shown here. For testing only. %>
+  <div class="notice bad" id="pretendCode"><%= t('entrant.codePretend', { code: pretendCode }) %></div>
+<% } %>
+<form class="card" method="post" action="/entrant/code">
+  <input type="hidden" name="email" value="<%= email %>">
+  <input type="hidden" name="next" value="<%= next %>">
+  <label for="code"><%= t('entrant.codeLabel') %></label>
+  <input id="code" type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus>
+  <p style="margin-top:16px"><button type="submit"><%= t('entrant.signIn') %></button></p>
+  <p class="small muted"><%= t('entrant.codeHint', { minutes: 10 }) %></p>
+</form>
+<p><a class="btn ghost" href="/entrant/login"><%= t('entrant.sendNewCode') %></a></p>

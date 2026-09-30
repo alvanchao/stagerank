@@ -1,0 +1,7 @@
+<h1><%= t('admin.googleMockTitle') %></h1>
+<div class="notice bad"><%= t('admin.googleMockWarn') %></div>
+<form class="card" method="post" action="/admin/google/mock">
+  <label for="email"><%= t('admin.googleMockEmail') %></label>
+  <input id="email" type="email" name="email" autocomplete="off" required>
+  <p style="margin-top:16px"><button type="submit"><%= t('common.confirm') %></button></p>
+</form>

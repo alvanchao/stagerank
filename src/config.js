@@ -38,6 +38,7 @@ function makeMailConfig({ smtpUrl, from, mode }) {
   const resolve = (wanted) => {
     if (wanted === 'smtp') return mail.smtpUrl && mail.from ? 'smtp' : 'off';
     if (wanted === 'memory') return 'memory';
+    if (wanted === 'pretend') return 'pretend';
     return 'off';
   };
   const mail = {
@@ -45,11 +46,16 @@ function makeMailConfig({ smtpUrl, from, mode }) {
     from,
     // 真的 SMTP 優先；沒有才看 MAIL_MODE=memory；否則關閉。
     // Real SMTP wins; otherwise MAIL_MODE=memory; otherwise off.
-    mode: smtpUrl && from ? 'smtp' : (mode === 'memory' ? 'memory' : 'off'),
+    mode: smtpUrl && from ? 'smtp' : (mode === 'memory' ? 'memory' : (mode === 'pretend' ? 'pretend' : 'off')),
     // 測試用：在同一個行程裡切換模式，不必重讀環境變數。
     // For tests: switch the mode inside one process without re-reading the environment.
     setMode(next) {
       mail.mode = resolve(next);
+    },
+    // 假裝寄信：信不會真的寄，驗證碼直接顯示在畫面上。只給測試站，正式比賽前必須關掉。
+    // Pretend mail: nothing is sent and the code is shown on screen. For a test site only; switch it off before a real event.
+    get pretend() {
+      return mail.mode === 'pretend';
     },
     get enabled() {
       return mail.mode !== 'off';
@@ -71,6 +77,23 @@ export const config = {
   timezone: str(env.TZ_DISPLAY, 'Asia/Taipei'),
 
   adminToken: str(env.ADMIN_TOKEN, ''),
+
+  // 用 Google 登入主辦後台：只有 ADMIN_EMAILS 名單裡的信箱進得去。
+  // Google 只負責證明「你是這個信箱的主人」，比賽資料都還在你自己的資料庫。
+  // 沒填 GOOGLE_CLIENT_ID/SECRET 就不會連 Google；GOOGLE_LOGIN_MOCK=true 是「假 Google」，
+  // 只給開發與測試，NODE_ENV=production 時一律不啟用。
+  // Sign in to the back office with Google. Only emails in ADMIN_EMAILS get in. Google only proves
+  // who you are; every competition record stays in your own database. Without GOOGLE_CLIENT_ID/SECRET
+  // nothing talks to Google; GOOGLE_LOGIN_MOCK=true is a pretend Google for development and tests
+  // and is never honoured when NODE_ENV=production.
+  adminEmails: str(env.ADMIN_EMAILS, '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
+  google: {
+    clientId: str(env.GOOGLE_CLIENT_ID, ''),
+    clientSecret: str(env.GOOGLE_CLIENT_SECRET, ''),
+    mock: bool(env.GOOGLE_LOGIN_MOCK, false) && str(env.NODE_ENV, 'development') !== 'production',
+    get real() { return Boolean(this.clientId && this.clientSecret); },
+    get enabled() { return this.real || this.mock; },
+  },
 
   // 報名人登入用的簽章金鑰。沒設就每次啟動隨機產生：安全，但重開機後大家要重新登入。
   // Signs the entrant's login cookie. Left unset it is random per boot: safe, but everyone has

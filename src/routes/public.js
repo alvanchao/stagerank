@@ -5,8 +5,7 @@ import * as roster from '../services/athletes.js';
 import * as feeGroups from '../services/feeGroups.js';
 import * as payments from '../payments/index.js';
 import * as onlinePay from '../services/onlinePay.js';
-import config from '../config.js';
-import { readCookie, safeEqual, STAFF_COOKIE } from '../middleware/auth.js';
+import { adminFromCookie } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -161,8 +160,7 @@ router.get('/r/:id', async (req, res, next) => {
     const registration = await regs.getRegistration(id);
     if (!registration) return notFound();
 
-    const token = readCookie(req.headers.cookie, STAFF_COOKIE);
-    const isOrganiser = Boolean(config.adminToken && token && safeEqual(token, config.adminToken));
+    const isOrganiser = Boolean(adminFromCookie(req.headers.cookie));
     const isOwner = Boolean(req.entrant && registration.entrant_id
       && String(registration.entrant_id) === String(req.entrant.id));
     if (!isOrganiser && !isOwner) return notFound();
