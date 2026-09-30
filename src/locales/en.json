@@ -263,7 +263,13 @@
       "mergeSameDance": "Only heats of the same dance can be merged.",
       "notMerged": "This heat is not merged, so there is nothing to split."
     },
-    "roundNameExample": "Qualifying"
+    "roundNameExample": "Qualifying",
+    "seedFromPrev": "Load advancers from “{name}”",
+    "mode": {
+      "mark": "Mark (call-back)",
+      "score": "Score",
+      "rank": "Rank"
+    }
   },
   "judges": {
     "title": "Judges",
@@ -602,6 +608,19 @@
     "reopen": "Undo",
     "logTitle": "Activity log",
     "when": "When",
-    "action": "Action"
+    "action": "Action",
+    "act": {
+      "host_start": "Host: started a heat",
+      "host_next": "Host: called the next heat",
+      "host_absent": "Host: marked absent",
+      "host_add": "Host: added a late competitor",
+      "host_move": "Host: moved a heat",
+      "host_round_advance_count": "Host: set advance count",
+      "host_round_free_pass": "Host: free pass",
+      "host_round_skip_to_final": "Host: skipped to final",
+      "checkin_entry": "Check-in: called in a competitor",
+      "checkin_resplit_round_dance": "Check-in: re-split heats",
+      "desk_report": "Desk: reported a competitor in"
+    }
   }
 }

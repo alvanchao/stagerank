@@ -65,17 +65,18 @@
 
     <table>
       <tr><th><%= t('schedule.round') %></th><th><%= t('schedule.scoringMode') %></th><th><%= t('schedule.advanceCount') %></th><th></th></tr>
-      <% block.rounds.forEach(function (r) { %>
+      <% block.rounds.forEach(function (r, ri) { %>
         <tr>
           <td><%= r.name %><div class="small muted"><%= t('floor.' + (r.status === 'pending' ? 'pending' : r.status === 'running' ? 'scoring' : 'closed')) %></div></td>
-          <td class="small"><%= t('schedule.scoringMode') %>: <%= r.scoring_mode %>
+          <td class="small"><%= t('schedule.scoringMode') %>: <%= t('schedule.mode.' + r.scoring_mode) %>
             <% if (r.scoring_mode === 'rank') { %><div class="small muted"><%= r.rank_method === 'skating' ? t('schedule.rankSkating') : t('schedule.rankSum') %></div><% } %>
             <% if (r.scoring_mode === 'mark') { %><div class="small muted"><%= r.mark_quota_mode === 'per_heat' ? t('schedule.markQuotaPerHeat') : t('schedule.markQuotaPerDance') %></div><% } %>
           </td>
           <td><%= r.advance_count || '—' %></td>
           <td>
             <form method="post" action="/admin/c/<%= competition.id %>/round/<%= r.id %>/seed" style="display:inline">
-              <button type="submit" class="ghost small"><%= t('schedule.seedRound') %></button>
+              <% if (ri > 0) { %><input type="hidden" name="fromRoundId" value="<%= block.rounds[ri - 1].id %>"><% } %>
+              <button type="submit" class="ghost small"><%= ri > 0 ? t('schedule.seedFromPrev', { name: block.rounds[ri - 1].name }) : t('schedule.seedRound') %></button>
             </form>
             <form method="post" action="/admin/c/<%= competition.id %>/round/<%= r.id %>/heats" style="display:inline">
               <button type="submit" class="ghost small"><%= t('schedule.buildHeats') %></button>
@@ -90,9 +91,9 @@
       <input id="rn-<%= block.division.id %>" type="text" name="name" required placeholder="<%= t('schedule.roundNameExample') %>">
       <label><%= t('schedule.scoringMode') %></label>
       <select name="scoringMode">
-        <option value="mark">mark</option>
-        <option value="score">score</option>
-        <option value="rank">rank</option>
+        <option value="mark"><%= t('schedule.mode.mark') %></option>
+        <option value="score"><%= t('schedule.mode.score') %></option>
+        <option value="rank"><%= t('schedule.mode.rank') %></option>
       </select>
       <label><%= t('schedule.advanceCount') %></label>
       <input type="text" name="advanceCount" inputmode="numeric">

@@ -46,8 +46,8 @@ router.get('/staff/app', async (req, res, next) => {
 });
 
 router.post('/staff/login', async (req, res, next) => {
+  const code = staffCodes.extractCode(req.body.code);
   try {
-    const code = staffCodes.extractCode(req.body.code);
     const { member, cookieValue } = await staffCodes.redeem(code, { standalone: req.body.standalone === '1' });
     res.setHeader(
       'Set-Cookie',
@@ -55,7 +55,9 @@ router.post('/staff/login', async (req, res, next) => {
     );
     return res.redirect(303, homeFor(member));
   } catch (err) {
-    if (err instanceof staffCodes.StaffError) return renderStaffApp(res, { code: '', error: err.key, status: 400 });
+    if (err instanceof staffCodes.StaffError) // 只是還沒安裝成 App 時碼沒被用掉，保留在輸入欄，安裝後不用重打。
+    // A refusal for "install first" leaves the code unused, so keep it in the field.
+    return renderStaffApp(res, { code: err.key === 'staffApp.errors.installFirst' ? code : '', error: err.key, status: 400 });
     return next(err);
   }
 });
@@ -100,7 +102,7 @@ router.get('/desk/:competitionId', asDesk, async (req, res, next) => {
   try {
     const competitionId = Number.parseInt(req.params.competitionId, 10);
     const competition = await comps.getCompetition(competitionId);
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
 
     const voucher = await (await import('../services/voucher.js')).activeVoucher(competitionId);
     const roster = voucher ? await schedule.rosterWithBibs(voucher.code) : [];

@@ -21,7 +21,9 @@ const viewsDir = path.join(here, 'views');
 // 每個頁面都先算出內容，再包進 layout，這樣頁尾標示只寫一次。
 // Each page renders first, then goes into the layout, so the footer credit is written once.
 async function renderPage(res, view, data = {}) {
-  const locals = { ...res.locals, ...data };
+  // 沒傳 title 的頁面（例如 404）也要能畫出來，不能讓 layout 丟錯。
+  // Pages that pass no title (a plain 404, say) must still render instead of throwing in the layout.
+  const locals = { title: '', ...res.locals, ...data };
   const body = await ejs.renderFile(path.join(viewsDir, `${view}.ejs`), locals, { async: false });
   const html = await ejs.renderFile(path.join(viewsDir, 'layout.ejs'), { ...locals, body }, { async: false });
   res.type('html').send(html);
@@ -49,7 +51,14 @@ export function createApp() {
   );
   app.use(localeMiddleware);
   app.use((req, res, next) => {
-    res.renderPage = (view, data) => renderPage(res, view, data);
+    // 畫面出錯時一定要有回應，否則請求會掛住、未處理的錯誤還會讓整個服務結束。
+    // A render failure must always answer the request; otherwise it hangs and an unhandled
+    // rejection would take the whole process down.
+    res.renderPage = (view, data) =>
+      renderPage(res, view, data).catch((err) => {
+        console.error('[stagerank] render failed:', err);
+        if (!res.headersSent) res.status(500).type('text/plain').send('Server error');
+      });
     // 畫面上要說這一組是單人、雙人還是多人，靠人數上下限判斷。
     // Screens say whether a division is a solo, a couple or a team; the member range decides.
     res.locals.kindOf = entryKind;
@@ -83,13 +92,20 @@ export function createApp() {
 
   app.use((req, res) => {
     res.status(404);
-    renderPage(res, 'error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
+    res.renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
   });
 
   app.use((err, req, res, _next) => {
-    console.error('[stagerank]', err);
-    res.status(500);
-    renderPage(res, 'error', { title: res.locals.t('errors.serverError'), messageKey: 'errors.serverError' });
+    // 網址裡的編號不合法、或找不到那場比賽，是「找不到」，不是伺服器壞掉。
+    // A malformed id or an unknown competition in the URL is "not found", not a server fault.
+    const notFound =
+      err?.code === '22P02' || err?.code === '22003' || (err?.name === 'FloorError' && err.key === 'errors.notFound');
+    if (!notFound) console.error('[stagerank]', err);
+    if (res.headersSent) return;
+    const status = notFound ? 404 : 500;
+    const key = notFound ? 'errors.notFound' : 'errors.serverError';
+    res.status(status);
+    res.renderPage('error', { title: res.locals.t(key), messageKey: key });
   });
 
   return app;

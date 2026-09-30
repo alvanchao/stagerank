@@ -126,6 +126,13 @@
   // ---- 補點：主持人加人時就地更新名單，不重整，裁判勾好的都還在 ----
   // A late add patches the list in place instead of refreshing, so nothing ticked is lost.
   if (window.StageRankLive) {
+    // 別位裁判送出、就緒或作廢，跟我這一頁的勾選無關；評分中不重整，
+    // 否則重整空檔內按下送出，會把伺服器上舊的（空的）勾選送出去。
+    // Another judge's ready/submit/void has nothing to do with this page. Reloading here could
+    // let a submit land in the gap and send the stale (empty) server state.
+    ['judge-ready', 'judge-submitted', 'judge-voided'].forEach(function (type) {
+      window.StageRankLive.takeOver(type, function () {});
+    });
     window.StageRankLive.takeOver('checkin', function () {
       saveDraft();
       window.StageRankLive.reloadNow();

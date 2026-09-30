@@ -51,7 +51,7 @@ router.get('/judge/:competitionId', async (req, res, next) => {
 
     const competitionId = Number.parseInt(req.params.competitionId, 10);
     const competition = await one('SELECT * FROM competitions WHERE id = $1', [competitionId]);
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
 
     // 現在場上的那一場。
     // Whatever is on the floor right now.

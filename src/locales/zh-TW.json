@@ -263,7 +263,13 @@
       "mergeSameDance": "只有同一支舞的場次才能併場。",
       "notMerged": "這一場不是併場，沒有東西可以拆。"
     },
-    "roundNameExample": "初賽"
+    "roundNameExample": "初賽",
+    "seedFromPrev": "帶入「{name}」的晉級者",
+    "mode": {
+      "mark": "勾選（Mark）",
+      "score": "打分（Score）",
+      "rank": "排名（Rank）"
+    }
   },
   "judges": {
     "title": "裁判",
@@ -602,6 +608,19 @@
     "reopen": "取消結束",
     "logTitle": "操作紀錄",
     "when": "時間",
-    "action": "動作"
+    "action": "動作",
+    "act": {
+      "host_start": "主持人：開始這一批",
+      "host_next": "主持人：叫下一批",
+      "host_absent": "主持人：標記缺席",
+      "host_add": "主持人：補點選手",
+      "host_move": "主持人：調整批次",
+      "host_round_advance_count": "主持人：設定晉級人數",
+      "host_round_free_pass": "主持人：免賽晉級",
+      "host_round_skip_to_final": "主持人：直接進決賽",
+      "checkin_entry": "檢錄：點名／報到",
+      "checkin_resplit_round_dance": "檢錄：重新分批",
+      "desk_report": "報到：登記選手到場"
+    }
   }
 }

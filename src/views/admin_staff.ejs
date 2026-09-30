@@ -34,7 +34,7 @@
 <% if (members.length === 0) { %>
   <p class="muted"><%= t('staffApp.none') %></p>
 <% } else { %>
-<table>
+<div style="overflow-x:auto"><table>
   <tr><th><%= t('export.name') %></th><th><%= t('staffApp.role') %></th><th><%= t('staffApp.status') %></th><th></th></tr>
   <% members.forEach(function (m) { %>
     <tr>
@@ -57,7 +57,7 @@
       </td>
     </tr>
   <% }); %>
-</table>
+</table></div>
 <% } %>
 
 <h2><%= t('staffApp.endTitle') %></h2>
@@ -78,11 +78,11 @@
 <% if (log.length === 0) { %>
   <p class="muted"><%= t('staffApp.none') %></p>
 <% } else { %>
-<table>
+<div style="overflow-x:auto"><table>
   <tr><th><%= t('staffApp.when') %></th><th><%= t('export.name') %></th><th><%= t('staffApp.role') %></th><th><%= t('staffApp.action') %></th></tr>
   <% log.forEach(function (l) { %>
-    <tr><td><%= when(l.created_at) %></td><td><%= l.staff_name %></td><td><%= t('staffApp.role_' + l.role) %></td><td><code><%= l.action %></code></td></tr>
+    <tr><td><%= when(l.created_at) %></td><td><%= l.staff_name %></td><td><%= t('staffApp.role_' + l.role) %></td><td><% var ak = 'staffApp.act.' + String(l.action).replace(/^[A-Z]+ \//, '').replace(/\/:[A-Za-z]+/g, '').replace(/[\/-]/g, '_'); var at = t(ak); %><%= at === ak ? l.action : at %></td></tr>
   <% }); %>
-</table>
+</table></div>
 <% } %>
 <style>@media print { header, footer, form, .btn, .notice, h2, table, .small { display: none !important; } }</style>

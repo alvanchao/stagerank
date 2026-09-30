@@ -337,6 +337,33 @@ test('普通瀏覽器被擋，除非主辦允許備用 / a plain browser is refu
   assert.equal((await app(lax.code, '0')).status, 303);
 });
 
+test('新增輪次自動排順序，後一輪的帶入按鈕帶上前一輪 / rounds get an order and later rounds seed from the previous one', async () => {
+  const c = await comps.createCompetition({ name: '順序盃', feeCents: 0, status: 'open' });
+  const division = await comps.addDivision({ competitionId: c.id, name: '成人拉丁', sortOrder: 1 });
+  const admin = { headers: { Cookie: 'stagerank_admin=test-admin-token' } };
+  await regs.register({ competitionId: c.id, divisionId: division.id, athleteName: '選手 1' });
+  await voucher.settle(c.id); // 畫面要有憑證碼才會列出各組 / the page lists divisions once a voucher exists
+  for (const name of ['準決賽', '決賽']) {
+    const r = await http.postForm(`/admin/c/${c.id}/division/${division.id}/round`, { name, scoringMode: 'mark', heatSize: '6' }, admin);
+    assert.equal(r.status, 303);
+  }
+  const rounds = await schedule.listRounds(division.id);
+  assert.deepEqual(rounds.map((r) => r.name), ['準決賽', '決賽']);
+  assert.ok(rounds[0].sort_order < rounds[1].sort_order, 'semi comes before final');
+  const page = await (await http.get(`/admin/c/${c.id}/schedule`, admin)).text();
+  assert.match(page, new RegExp(`name="fromRoundId" value="${rounds[0].id}"`));
+  assert.doesNotMatch(page, new RegExp(`name="fromRoundId" value="${rounds[1].id}"`));
+});
+
+test('不存在的網址回 404，不會讓服務掛掉；編號亂打也是 404 / unknown ids answer 404 and never hang or crash', async () => {
+  for (const u of ['/results/nope', '/results/nope/bib?bib=1', '/c/nope', '/admin/c/99999/schedule', '/admin/c/99999/results',
+    '/admin/c/99999/export/bibs.xlsx', '/admin/c/99999/staff', '/desk/99999', '/host/99999', '/checkin/99999', '/admin/c/abc', '/desk/abc']) {
+    const r = await http.get(u, { headers: { Cookie: 'stagerank_admin=test-admin-token' } });
+    assert.equal(r.status, 404, u);
+  }
+  assert.equal((await http.get('/healthz')).status, 200, 'server is still up');
+});
+
 test('停用、重新產生、結束比賽，登入狀態立刻失效 / revoke, reissue and end kill the sign-in at once', async () => {
   const { a, staffCodes, one } = await staffWorld();
   const cid = a.competition.id;
@@ -358,7 +385,11 @@ test('停用、重新產生、結束比賽，登入狀態立刻失效 / revoke, 
   assert.equal((await http.get(`/host/${cid}`, s2b)).status, 401, 'competition ended');
   assert.equal((await app((await one(a.competition, 'host', '丙')).code)).status, 400, 'no new sign-in after the end');
   await staffCodes.reopenCompetition(cid);
-  assert.equal((await http.get(`/host/${cid}`, s2b)).status, 200, 'undo the end');
+  // 取消結束不會讓被踢掉的人復活；要重新發碼、重新登入。
+  // Reopening must not revive signed-out staff; they need a fresh code.
+  assert.equal((await http.get(`/host/${cid}`, s2b)).status, 401, 'reopening does not revive old sign-ins');
+  const again = await staffCodes.reissue(m2.member.id, cid);
+  assert.equal((await http.get(`/host/${cid}`, cookieOf(await app(again.code)))).status, 200, 'a fresh code works');
 });
 
 test('操作紀錄記下是誰做的；主辦後台能建一批並顯示 QR / the log names who did it; the admin page issues a batch with QR', async () => {

@@ -31,7 +31,7 @@ router.get('/results', async (req, res, next) => {
 router.get('/results/:slug', async (req, res, next) => {
   try {
     const competition = await comps.getCompetitionBySlug(req.params.slug);
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
 
     const divisions = await comps.listDivisions(competition.id);
     const blocks = [];
@@ -62,7 +62,7 @@ router.get('/results/:slug', async (req, res, next) => {
 router.get('/results/:slug/bib', async (req, res, next) => {
   try {
     const competition = await comps.getCompetitionBySlug(req.params.slug);
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
 
     const bib = Number.parseInt(String(req.query.bib || '').trim(), 10);
     let lookup = null;

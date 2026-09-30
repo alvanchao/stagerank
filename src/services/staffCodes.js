@@ -135,6 +135,9 @@ export function listMembers(competitionId) {
 
 export async function endCompetition(competitionId) {
   await query('UPDATE competitions SET ended_at = COALESCE(ended_at, now()) WHERE id = $1', [competitionId]);
+  // 結束就要真的踢掉：清掉登入憑證，之後就算取消結束，也得重新發碼、重新掃描。
+  // Ending must really sign everyone out: clear the sessions, so even after reopening, staff need new codes.
+  await query('UPDATE staff_members SET session_hash = NULL WHERE competition_id = $1', [competitionId]);
 }
 
 export async function reopenCompetition(competitionId) {

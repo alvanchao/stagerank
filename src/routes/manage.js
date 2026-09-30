@@ -29,7 +29,7 @@ function attachment(slug, kind) {
 router.get('/c/:id/export/bibs.xlsx', requireStaff, async (req, res, next) => {
   try {
     const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
     const voucher = await voucherService.activeVoucher(competition.id);
     if (!voucher) return backToSchedule(res, competition.id, 'export.noVoucher');
     const buffer = await xlsx.bibsWorkbook({ voucherCode: voucher.code, t: res.locals.t });
@@ -44,7 +44,7 @@ router.get('/c/:id/export/bibs.xlsx', requireStaff, async (req, res, next) => {
 router.get('/c/:id/export/lists.xlsx', requireStaff, async (req, res, next) => {
   try {
     const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
     const voucher = await voucherService.activeVoucher(competition.id);
     if (!voucher) return backToSchedule(res, competition.id, 'export.noVoucher');
     const buffer = await xlsx.listsWorkbook({ competitionId: competition.id, t: res.locals.t });
@@ -59,7 +59,7 @@ router.get('/c/:id/export/lists.xlsx', requireStaff, async (req, res, next) => {
 router.get('/c/:id/export/order.xlsx', requireStaff, async (req, res, next) => {
   try {
     const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
     const buffer = await xlsx.orderWorkbook({ competitionId: competition.id, t: res.locals.t });
     res.setHeader('Content-Type', xlsx.XLSX_TYPE);
     res.setHeader('Content-Disposition', attachment(competition.slug, 'order'));
@@ -73,7 +73,7 @@ router.get('/c/:id/schedule', requireStaff, async (req, res, next) => {
   try {
     const competitionId = Number.parseInt(req.params.id, 10);
     const competition = await comps.getCompetition(competitionId);
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
 
     const divisions = await comps.listDivisions(competitionId);
     const dances = await schedule.listDances(competitionId);
@@ -134,10 +134,16 @@ router.post('/c/:id/division/:divisionId/dances', requireStaff, async (req, res,
 
 router.post('/c/:id/division/:divisionId/round', requireStaff, async (req, res, next) => {
   try {
+    const divisionId = Number.parseInt(req.params.divisionId, 10);
+    // 順序沒填就接在最後一輪後面，這樣「準決賽、決賽」不用主辦自己排順序。
+    // No order given: append after the last round, so semi-final then final need no manual ordering.
+    const given = Number.parseInt(req.body.sortOrder, 10);
+    const existing = await schedule.listRounds(divisionId);
+    const sortOrder = Number.isFinite(given) ? given : Math.max(0, ...existing.map((r) => r.sort_order)) + (existing.length ? 1 : 0);
     await schedule.createRound({
-      divisionId: Number.parseInt(req.params.divisionId, 10),
+      divisionId,
       name: req.body.name,
-      sortOrder: Number.parseInt(req.body.sortOrder || '0', 10),
+      sortOrder,
       scoringMode: req.body.scoringMode,
       advanceCount: req.body.advanceCount ? Number.parseInt(req.body.advanceCount, 10) : null,
       markQuotaMode: req.body.markQuotaMode,
@@ -266,7 +272,7 @@ router.get('/c/:id/results', requireStaff, async (req, res, next) => {
   try {
     const competitionId = Number.parseInt(req.params.id, 10);
     const competition = await comps.getCompetition(competitionId);
-    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    if (!competition) return res.status(404).renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
 
     const divisions = await comps.listDivisions(competitionId);
     const blocks = [];

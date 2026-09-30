@@ -6,6 +6,10 @@ import { scheduleRemoteIds } from './payments/remoteIds.js';
 
 const app = createApp();
 
+// 任何漏網的錯誤只記錄，不讓整個服務結束；比賽當天服務不能因為一個壞請求下線。
+// A stray rejection is logged, never fatal: a live event cannot lose the service to one bad request.
+process.on('unhandledRejection', (err) => console.error('[stagerank] unhandled rejection:', err));
+
 async function start() {
   // 一鍵部署：啟動時自動把資料庫升級到最新，主辦不用做任何事。
   // One-click deploy: the schema upgrades itself on boot so the organiser does nothing.
