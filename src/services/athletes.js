@@ -122,10 +122,14 @@ export function getAthlete(id, entrantId = null) {
 
 export function listByIds(ids, entrantId) {
   if (!ids || ids.length === 0) return Promise.resolve([]);
+  // 照勾選的順序回傳：雙人組別的順序（誰在前）要照報名時的意思，不能被資料庫重排。
+  // Returned in the order they were ticked: who comes first in a couple must follow the entry, not
+  // whatever order the database happens to return.
+  const wanted = ids.map((id) => Number.parseInt(id, 10)).filter(Number.isFinite);
   return many(
     'SELECT * FROM athletes WHERE id = ANY($1::bigint[]) AND entrant_id = $2',
-    [ids.map((id) => Number.parseInt(id, 10)).filter(Number.isFinite), entrantId],
-  );
+    [wanted, entrantId],
+  ).then((rows) => [...rows].sort((a, b) => wanted.indexOf(Number(a.id)) - wanted.indexOf(Number(b.id))));
 }
 
 // 年齡不符就擋下來，而且要講清楚是哪一位、幾歲、限制是多少。

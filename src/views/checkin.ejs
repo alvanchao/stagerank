@@ -1,5 +1,6 @@
 <h1><%= t('floor.checkinTitle') %></h1>
 <p class="small muted"><%= competition.name %></p>
+<p class="small"><a href="/desk/<%= competition.id %>"><%= t('floor.reportTitle') %></a></p>
 <% if (typeof error !== 'undefined' && error) { %><div class="notice bad"><%= t(error) %></div><% } %>
 
 <% if (heats.length === 0) { %>

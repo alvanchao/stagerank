@@ -45,7 +45,7 @@ async function buildCompetition({ names = 30, divisionNames = ['U15 拉丁'], da
   }
 
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101, mode: 'blocks' });
   return { competition, divisions, dances, voucher: settled.voucher };
 }
 

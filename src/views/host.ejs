@@ -1,5 +1,6 @@
 <h1><%= t('floor.title') %></h1>
 <p class="small muted"><%= competition.name %></p>
+<p class="small"><a href="/desk/<%= competition.id %>"><%= t('floor.reportTitle') %></a></p>
 <% if (typeof error !== 'undefined' && error) { %><div class="notice bad"><%= t(error) %></div><% } %>
 
 <%# 主持人在一輪開始前的決定：照舊、免賽晉級、直接決賽。只有這個畫面有這三個按鈕。 %>

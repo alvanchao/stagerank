@@ -20,8 +20,48 @@ export function readCookie(header, name) {
   return undefined;
 }
 
-// 主辦、主持人、檢錄、報到都用同一組通行碼。
-// The organiser, host, check-in and registration desk all share one passcode.
+export function staffCookieName(competitionId, role) {
+  return `stagerank_${role}_${competitionId}`;
+}
+
+// 主辦通行碼（全站唯一，放環境變數）可以進所有工作人員畫面；
+// 主持人、點錄各有「每場比賽自己的」通行碼，只對該場有效。
+// The organiser passcode (one per site, in the environment) opens every staff screen.
+// Host and check-in each have a passcode of their own per competition, valid for that one only.
+export function requireRole(...roles) {
+  return async (req, res, next) => {
+    try {
+      const cookies = req.headers.cookie;
+      const token = readCookie(cookies, STAFF_COOKIE);
+      if (config.adminToken && token && safeEqual(token, config.adminToken)) {
+        req.staffRole = 'admin';
+        return next();
+      }
+      const competitionId = Number.parseInt(req.params.competitionId, 10);
+      if (Number.isFinite(competitionId)) {
+        const { verify } = await import('../services/staffCodes.js');
+        for (const role of roles) {
+          const code = readCookie(cookies, staffCookieName(competitionId, role));
+          if (code && (await verify(competitionId, role, code))) {
+            req.staffRole = role;
+            return next();
+          }
+        }
+      }
+      return res.status(401).renderPage('admin_login', {
+        title: res.locals.t('admin.title'),
+        hasToken: true,
+        error: null,
+        staffLogin: Number.isFinite(competitionId) ? { competitionId, roles } : null,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  };
+}
+
+// 只限主辦。
+// Organiser only.
 export function requireStaff(req, res, next) {
   if (!config.adminToken) {
     return res.renderPage('admin_login', { title: res.locals.t('admin.title'), hasToken: false, error: null });
@@ -60,6 +100,7 @@ export function requireEntrant(req, res, next) {
 
 export default {
   requireStaff,
+  requireRole,
   attachEntrant,
   requireEntrant,
   safeEqual,

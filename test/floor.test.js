@@ -35,7 +35,7 @@ async function setup({ dancers = 6, heatSize = 3, judgeCount = 3, scoringMode = 
     await regs.register({ competitionId: competition.id, divisionId: division.id, athleteName: `選手 ${i}` });
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   const round = await schedule.createRound({
     divisionId: division.id,
@@ -276,7 +276,7 @@ test('裁判候場提示：還有幾場是精確的 / the judge waiting notice c
     }
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   for (const division of [a, b]) {
     const round = await schedule.createRound({ divisionId: division.id, name: '初賽', heatSize: 3 });

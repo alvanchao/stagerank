@@ -6,6 +6,7 @@ import * as voucherService from '../services/voucher.js';
 import * as stats from '../services/stats.js';
 import * as entrants from '../services/entrants.js';
 import * as feeGroups from '../services/feeGroups.js';
+import * as staffCodes from '../services/staffCodes.js';
 import * as setup from '../services/setup.js';
 import { providerStatus } from '../payments/index.js';
 import { requireStaff as requireAdmin, safeEqual, STAFF_COOKIE as COOKIE } from '../middleware/auth.js';
@@ -46,7 +47,24 @@ router.post('/new', requireAdmin, async (req, res, next) => {
       feeCents: Number.parseInt(req.body.feeCents, 10) || 0,
       status: req.body.status === 'open' ? 'open' : 'draft',
     });
-    return res.redirect(303, `/admin/c/${competition.id}`);
+    // 建立時就產生這場的通行碼，直接在回應頁顯示一次（不放在網址裡）。
+    // Issue this competition's passcodes at creation and show them once, never in a URL.
+    const newCodes = await staffCodes.issueAll(competition.id);
+    req.params.id = String(competition.id);
+    return renderAdminCompetition(req, res, { newCodes });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// 重新產生某個角色的通行碼，舊的立刻失效。
+// Regenerate one role's passcode; the old one stops working at once.
+router.post('/c/:id/staff-code', requireAdmin, async (req, res, next) => {
+  try {
+    const role = req.body.role;
+    if (!staffCodes.ROLES.includes(role)) return res.redirect(303, `/admin/c/${req.params.id}?error=errors.badRequest`);
+    const code = await staffCodes.issue(Number.parseInt(req.params.id, 10), role);
+    return renderAdminCompetition(req, res, { newCodes: { [role]: code } });
   } catch (err) {
     return next(err);
   }
@@ -328,6 +346,8 @@ async function renderAdminCompetition(req, res, extra = {}) {
     feeGroups: await feeGroups.listGroups(competition.id),
     registrations: await regs.listRegistrations(competition.id),
     voucher: await voucherService.activeVoucher(competition.id),
+    staffStatus: await staffCodes.status(competition.id),
+    newCodes: null,
     message: null,
     error: req.query.error || null,
     ...extra,

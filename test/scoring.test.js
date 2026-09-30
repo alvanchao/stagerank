@@ -41,7 +41,7 @@ async function setup({
     await regs.register({ competitionId: competition.id, divisionId: division.id, athleteName: `選手 ${i}` });
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   const round = await schedule.createRound({ divisionId: division.id, name: '初賽', heatSize, ...roundOptions });
   const entries = await schedule.seedFirstRound(settled.voucher.code, round.id);

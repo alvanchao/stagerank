@@ -44,7 +44,7 @@ async function scenario({ dancers = 6, heatSize = 3, judgeCount = 3, roundOption
     await regs.register({ competitionId: competition.id, divisionId: division.id, athleteName: `選手 ${i}` });
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   const round = await schedule.createRound({
     divisionId: division.id,
@@ -277,4 +277,76 @@ test('即時同步的連線開得起來 / the live feed connects', async () => {
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /text\/event-stream/);
   controller.abort();
+});
+
+// ---- 每場比賽各自的工作人員通行碼 / per-competition staff passcodes
+test('主持人與點錄的通行碼每場獨立、角色互不通用、重新產生後舊碼失效', async () => {
+  const a = await scenario();
+  const staffCodes = await import('../src/services/staffCodes.js');
+  const codesA = await staffCodes.issueAll(a.competition.id);
+  const b = await scenario();
+  const codesB = await staffCodes.issueAll(b.competition.id);
+
+  async function login(cid, role, token) {
+    return http.postForm(`/staff/${cid}/login`, { role, token });
+  }
+  const cookieOf = (res) => ({ headers: { cookie: res.headers.get('set-cookie').split(';')[0] } });
+
+  // 主持人碼：開得了自己那場的主持頁，開不了別場、開不了點錄與後台
+  const h = await login(a.competition.id, 'host', codesA.host);
+  assert.equal(h.status, 303);
+  const asHost = cookieOf(h);
+  assert.equal((await http.get(`/host/${a.competition.id}`, asHost)).status, 200);
+  assert.equal((await http.get(`/host/${b.competition.id}`, asHost)).status, 401);
+  assert.equal((await http.get(`/checkin/${a.competition.id}`, asHost)).status, 401);
+  assert.ok((await (await http.get(`/admin/c/${a.competition.id}`, asHost)).text()).includes('name="token"'), 'host is stopped at the admin login');
+
+  // 點錄碼：只能點錄／櫃檯
+  const c = await login(a.competition.id, 'checkin', codesA.checkin);
+  const asCheckin = cookieOf(c);
+  assert.equal((await http.get(`/checkin/${a.competition.id}`, asCheckin)).status, 200);
+  assert.equal((await http.get(`/desk/${a.competition.id}`, asCheckin)).status, 200);
+  assert.equal((await http.get(`/host/${a.competition.id}`, asCheckin)).status, 401);
+
+  // 別場的碼、亂猜的碼、角色搭錯，都進不去
+  assert.equal((await login(a.competition.id, 'host', codesB.host)).status, 401);
+  assert.equal((await login(a.competition.id, 'host', 'AAAAA-AAAAA')).status, 401);
+  assert.equal((await login(a.competition.id, 'checkin', codesA.host)).status, 401);
+
+  // 裁判 cookie 進不了主持人頁
+  const jl = await http.postForm(`/judge/login`, { code: a.judges[0].login_code });
+  const asJudge = { headers: { cookie: (jl.headers.get('set-cookie') || '').split(';')[0] } };
+  assert.equal((await http.get(`/host/${a.competition.id}`, asJudge)).status, 401);
+
+  // 重新產生：舊碼立刻失效，新碼可用
+  const fresh = await staffCodes.issue(a.competition.id, 'host');
+  assert.equal((await http.get(`/host/${a.competition.id}`, asHost)).status, 401);
+  assert.equal((await login(a.competition.id, 'host', fresh)).status, 303);
+
+  // 主辦通行碼仍然全部可用
+  assert.equal((await http.get(`/host/${a.competition.id}`, staff())).status, 200);
+});
+
+test('報到密碼只進報到頁；點錄與主持人可以補救漏掉的報到', async () => {
+  const a = await scenario();
+  const staffCodes = await import('../src/services/staffCodes.js');
+  const codes = await staffCodes.issueAll(a.competition.id);
+  const cid = a.competition.id;
+  const cookieOf = (res) => ({ headers: { cookie: res.headers.get('set-cookie').split(';')[0] } });
+  const login = (role) => http.postForm(`/staff/${cid}/login`, { role, token: codes[role] });
+
+  const asDesk = cookieOf(await login('desk'));
+  assert.equal((await http.get(`/desk/${cid}`, asDesk)).status, 200);
+  assert.equal((await http.get(`/checkin/${cid}`, asDesk)).status, 401);
+  assert.equal((await http.get(`/host/${cid}`, asDesk)).status, 401);
+
+  const asCheckin = cookieOf(await login('checkin'));
+  assert.equal((await http.get(`/desk/${cid}`, asCheckin)).status, 200);
+  const asHost = cookieOf(await login('host'));
+  assert.equal((await http.get(`/desk/${cid}`, asHost)).status, 200);
+
+  // 別場的報到碼無效
+  const b = await scenario();
+  const codesB = await staffCodes.issueAll(b.competition.id);
+  assert.equal((await http.postForm(`/staff/${cid}/login`, { role: 'desk', token: codesB.desk })).status, 401);
 });

@@ -1,5 +1,16 @@
 <h1><%= t('admin.title') %></h1>
-<% if (!hasToken) { %>
+<% if (typeof staffLogin !== 'undefined' && staffLogin) { %>
+  <% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+  <form class="card" method="post" action="/staff/<%= staffLogin.competitionId %>/login">
+    <label for="role"><%= t('staffCodes.role') %></label>
+    <select id="role" name="role">
+      <% staffLogin.roles.forEach(function (r) { %><option value="<%= r %>"><%= t('staffCodes.' + r) %></option><% }); %>
+    </select>
+    <label for="token"><%= t('staffCodes.prompt') %></label>
+    <input id="token" type="text" name="token" autocomplete="off" required>
+    <p style="margin-top:16px"><button type="submit"><%= t('common.confirm') %></button></p>
+  </form>
+<% } else if (!hasToken) { %>
   <div class="notice bad"><%= t('admin.tokenMissing') %></div>
 <% } else { %>
   <% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>

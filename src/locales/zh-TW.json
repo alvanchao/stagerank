@@ -228,6 +228,10 @@
     "runningOrder": "秩序表",
     "rebuild": "重排上場順序",
     "assignBibs": "產生背號",
+    "bibMode": "背號編法",
+    "bibSequential": "每人（每對）整場一個號碼，連續往下編；報多個組別沿用同一個號碼",
+    "bibBlocks": "每個組別各自一個號碼區段（101、102…；201、202…）",
+    "bibStart": "起始號碼",
     "roster": "選手名單",
     "heat": "場次",
     "heats": "場次",
@@ -254,6 +258,7 @@
     "seedRound": "帶入選手",
     "errors": {
       "heatLocked": "這一場已經開始或結束，不能再調整。",
+      "duplicateEntry": "同一組人在同一個組別有兩筆已付款的報名（可能重複付款）。請先把多的那筆取消或退款，再重新結算名單。",
       "mergeNeedsTwo": "併場至少要選兩場。",
       "mergeSameDance": "只有同一支舞的場次才能併場。",
       "notMerged": "這一場不是併場，沒有東西可以拆。"
@@ -500,5 +505,19 @@
     "rowAgeMax": "{age} 歲以下",
     "rowAgeMin": "{age} 歲以上",
     "sourceOption": "{name} · {count} 個項目"
+  },
+  "staffCodes": {
+    "role": "身分",
+    "host": "主持人",
+    "checkin": "點錄",
+    "prompt": "請輸入這場比賽的通行碼",
+    "title": "工作人員通行碼",
+    "hint": "每場比賽各自的密碼，只對這一場有效。密碼只會顯示這一次，請當場抄下或傳給對方；忘了就按「重新產生」，舊密碼立刻失效。",
+    "notIssued": "尚未產生",
+    "issuedAt": "產生於",
+    "generate": "產生",
+    "regenerate": "重新產生",
+    "shownOnce": "新密碼（只顯示這一次）",
+    "desk": "報到"
   }
 }

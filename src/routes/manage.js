@@ -105,7 +105,10 @@ router.post('/c/:id/bibs', requireStaff, async (req, res, next) => {
     const competitionId = Number.parseInt(req.params.id, 10);
     const voucher = await voucherService.activeVoucher(competitionId);
     if (!voucher) return backToSchedule(res, competitionId, 'admin.voucherNone');
-    await schedule.assignBibs(voucher.code, { start: Number.parseInt(req.body.start || '101', 10) });
+    await schedule.assignBibs(voucher.code, {
+      start: Number.parseInt(req.body.start || '1', 10) || 1,
+      mode: req.body.mode === 'blocks' ? 'blocks' : 'sequential',
+    });
     backToSchedule(res, competitionId);
   } catch (err) {
     next(err);

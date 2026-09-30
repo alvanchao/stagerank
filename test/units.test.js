@@ -83,7 +83,7 @@ test('雙人報名：一個背號、兩個名字、成員都存起來 / a couple
   // 背號給整個參賽單位，不是給個人。
   // The bib belongs to the unit, not to a person.
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
   const roster = await schedule.rosterWithBibs(settled.voucher.code);
   assert.equal(roster.length, 1, 'two people, one entry, one bib');
   assert.equal(roster[0].athlete_name, '王小明 / 李小美');
@@ -212,7 +212,7 @@ async function twoRoundDivision({ dancers = 12, advanceCount = 6 } = {}) {
     });
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   const prelim = await schedule.createRound({
     divisionId: division.id, name: '初賽', heatSize: 6, scoringMode: 'mark', advanceCount, sortOrder: 1,
@@ -307,7 +307,7 @@ test('直接決賽：中間的輪次一起記為未舉行 / skipping to the fina
     });
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   const prelim = await schedule.createRound({ divisionId: division.id, name: '初賽', advanceCount: 6, sortOrder: 1 });
   const semi = await schedule.createRound({ divisionId: division.id, name: '複賽', advanceCount: 4, sortOrder: 2 });

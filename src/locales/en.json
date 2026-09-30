@@ -228,6 +228,10 @@
     "runningOrder": "Running order",
     "rebuild": "Rebuild running order",
     "assignBibs": "Assign bibs",
+    "bibMode": "Bib numbering",
+    "bibSequential": "One number per entry for the whole competition, counting up; the same entry keeps its number in every division",
+    "bibBlocks": "Each division gets its own number range (101, 102…; 201, 202…)",
+    "bibStart": "Start number",
     "roster": "Competitors",
     "heat": "Heat",
     "heats": "Heats",
@@ -254,6 +258,7 @@
     "seedRound": "Load competitors",
     "errors": {
       "heatLocked": "This heat has started or finished and can no longer be changed.",
+      "duplicateEntry": "The same people have two paid entries in one division (possibly a double payment). Cancel or refund the extra one, then settle the roster again.",
       "mergeNeedsTwo": "Choose at least two heats to merge.",
       "mergeSameDance": "Only heats of the same dance can be merged.",
       "notMerged": "This heat is not merged, so there is nothing to split."
@@ -500,5 +505,19 @@
     "rowAgeMax": "up to {age}",
     "rowAgeMin": "{age} and over",
     "sourceOption": "{name} · {count} divisions"
+  },
+  "staffCodes": {
+    "role": "Role",
+    "host": "Host",
+    "checkin": "Check-in",
+    "prompt": "Enter this competition's passcode",
+    "title": "Staff passcodes",
+    "hint": "Each competition has its own passcodes, valid for that one only. A code is shown once: copy it or hand it over now. If it is lost, regenerate; the old code stops working at once.",
+    "notIssued": "Not issued",
+    "issuedAt": "Issued",
+    "generate": "Generate",
+    "regenerate": "Regenerate",
+    "shownOnce": "New passcode (shown once)",
+    "desk": "Registration desk"
   }
 }

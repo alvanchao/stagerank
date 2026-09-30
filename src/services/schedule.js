@@ -90,33 +90,81 @@ export function roundEntries(roundId, { includeAbsent = true } = {}) {
 
 // ---------------------------------------------------------------- 背號 / bibs
 
-// 背號只給結算名單裡的人，依組別自動編號，可設定起始號碼。
-// Bibs go only to the settled roster, numbered per division from a configurable start.
-export async function assignBibs(voucherCode, { start = 101, perDivisionBlock = 100 } = {}) {
+// 背號只給結算名單裡的人。
+// 預設（sequential）：每個參賽單位整場一個號碼，從起始號碼連續往下編；
+// 順序是組別順序、同組內照報名先後；同一組人報第二個組別，沿用原本的背號。
+// 選 blocks 的話，每個組別各自一個號碼區段（101、102…；201、202…）。
+// Bibs go only to the settled roster.
+// Default (sequential): one number per entry unit for the whole competition, counting up from the
+// start number, in division order and then registration order; the same people entered in a second
+// division keep their bib. With blocks, each division gets its own number range instead.
+export async function assignBibs(voucherCode, { start = 1, mode = 'sequential', perDivisionBlock = 100 } = {}) {
   const voucher = await requireVoucher(voucherCode);
   const entries = await entriesFor(voucher.id);
 
-  return withTransaction(async (client) => {
-    let divisionIndex = -1;
-    let lastDivision = null;
-    let next = start;
+  // 「同一組人」用成員認：名冊編號優先，其次 email，最後才是姓名。
+  // The same people are recognised by member: roster id first, then email, and name only as a last resort.
+  const members = await many(
+    `SELECT rm.registration_id, rm.athlete_id, rm.person_email, rm.athlete_name
+     FROM registration_members rm
+     JOIN voucher_entries ve ON ve.registration_id = rm.registration_id
+     WHERE ve.voucher_id = $1`,
+    [voucher.id],
+  );
+  const keysByRegistration = new Map();
+  for (const m of members) {
+    const key = m.athlete_id ? `a:${m.athlete_id}` : (m.person_email ? `e:${String(m.person_email).toLowerCase()}` : `n:${String(m.athlete_name).trim().toLowerCase()}`);
+    const list = keysByRegistration.get(String(m.registration_id)) || [];
+    list.push(key);
+    keysByRegistration.set(String(m.registration_id), list);
+  }
+  const unitKey = (entry) => {
+    const list = keysByRegistration.get(String(entry.registration_id));
+    return list && list.length > 0 ? [...list].sort().join('|') : `r:${entry.registration_id}`;
+  };
 
-    for (const entry of entries) {
-      if (String(entry.division_id) !== String(lastDivision)) {
-        divisionIndex += 1;
-        lastDivision = entry.division_id;
-        // 每個組別一個號碼區段，主辦一看背號就知道是哪一組。
-        // Each division gets its own block so a bib number tells you the division at a glance.
-        next = start + divisionIndex * perDivisionBlock;
+  // 同一組人在同一個組別報了兩次（重複付款），不能默默給兩個背號，要請主辦先處理。
+  // The same people entered twice in one division (a double payment) must not quietly get two bibs.
+  const seenInDivision = new Set();
+  for (const entry of entries) {
+    const marker = `${entry.division_id}:${unitKey(entry)}`;
+    if (seenInDivision.has(marker)) throw new ScheduleError('schedule.errors.duplicateEntry');
+    seenInDivision.add(marker);
+  }
+
+  return withTransaction(async (client) => {
+    await client.query('UPDATE voucher_entries SET bib_number = NULL WHERE voucher_id = $1', [voucher.id]);
+
+    if (mode === 'blocks') {
+      let divisionIndex = -1;
+      let lastDivision = null;
+      let next = start;
+      for (const entry of entries) {
+        if (String(entry.division_id) !== String(lastDivision)) {
+          divisionIndex += 1;
+          lastDivision = entry.division_id;
+          next = start + divisionIndex * perDivisionBlock;
+        }
+        await client.query('UPDATE voucher_entries SET bib_number = $2 WHERE id = $1', [entry.id, next]);
+        next += 1;
       }
-      await client.query('UPDATE voucher_entries SET bib_number = $2 WHERE id = $1', [entry.id, next]);
-      next += 1;
+    } else {
+      const bibByUnit = new Map();
+      let next = start;
+      for (const entry of entries) {
+        const key = unitKey(entry);
+        if (!bibByUnit.has(key)) {
+          bibByUnit.set(key, next);
+          next += 1;
+        }
+        await client.query('UPDATE voucher_entries SET bib_number = $2 WHERE id = $1', [entry.id, bibByUnit.get(key)]);
+      }
     }
 
     const { rows } = await client.query(
       `SELECT ve.*, d.name AS division_name FROM voucher_entries ve
        JOIN divisions d ON d.id = ve.division_id
-       WHERE ve.voucher_id = $1 ORDER BY ve.bib_number`,
+       WHERE ve.voucher_id = $1 ORDER BY ve.bib_number, d.sort_order, d.id`,
       [voucher.id],
     );
     return rows;

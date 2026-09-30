@@ -63,7 +63,7 @@ async function setUpHeat() {
     await regs.register({ competitionId: competition.id, divisionId: division.id, athleteName: name });
   }
   const settled = await voucher.settle(competition.id);
-  await schedule.assignBibs(settled.voucher.code);
+  await schedule.assignBibs(settled.voucher.code, { start: 101 });
 
   const round = await schedule.createRound({
     divisionId: division.id,
