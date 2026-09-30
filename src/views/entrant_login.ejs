@@ -6,12 +6,18 @@
   <label for="email"><%= t('entrant.email') %></label>
   <input id="email" type="email" name="email" required maxlength="180" value="<%= form.email || '' %>">
 
-  <label for="password"><%= t('entrant.password') %></label>
-  <input id="password" type="password" name="password" required>
+  <% if (!mailMode) { %>
+    <label for="password"><%= t('entrant.password') %></label>
+    <input id="password" type="password" name="password" required>
+  <% } %>
 
   <input type="hidden" name="next" value="<%= form.next || '' %>">
   <p style="margin-top:20px"><button type="submit"><%= t('entrant.signIn') %></button></p>
-  <p class="small muted"><%= t('entrant.forgotPassword') %></p>
+  <% if (mailMode) { %>
+    <p class="small muted"><%= t('entrant.mailLoginHint') %></p>
+  <% } else { %>
+    <p class="small muted"><%= t('entrant.forgotPassword') %></p>
+  <% } %>
 </form>
 
 <p class="small"><a href="/entrant/signup"><%= t('entrant.noAccount') %></a></p>

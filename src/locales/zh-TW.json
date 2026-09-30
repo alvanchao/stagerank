@@ -34,7 +34,13 @@
     "title": "比賽列表",
     "openCompetitions": "開放報名中",
     "noCompetitions": "目前沒有開放報名的比賽。",
-    "registerNow": "我要報名"
+    "registerNow": "我要報名",
+    "signedOutHint": "註冊一個報名帳號，建好選手名冊，之後每一場比賽都用點的。",
+    "signUp": "註冊",
+    "signIn": "登入",
+    "myEntries": "我的報名",
+    "viewEntry": "查看",
+    "roster": "我的名冊"
   },
   "competition": {
     "status": {
@@ -420,8 +426,14 @@
       "emailInvalid": "電子郵件格式不對。",
       "emailTaken": "這個電子郵件已經註冊過了，請直接登入。",
       "passwordTooShort": "密碼至少要 {min} 個字。",
-      "badCredentials": "電子郵件或密碼不對。"
-    }
+      "badCredentials": "電子郵件或密碼不對。",
+      "linkInvalid": "這條登入連結已經用過或已過期，請重新申請。"
+    },
+    "linkSentIfExists": "如果這個信箱已註冊，我們已寄出登入連結",
+    "linkSentHint": "請到信箱收信，連結 {minutes} 分鐘內有效，只能用一次。沒收到請看垃圾信件匣，稍等一分鐘後可以再申請。",
+    "linkConfirm": "按下按鈕就會登入。",
+    "sendNewLink": "重新寄一封登入連結",
+    "mailLoginHint": "輸入信箱，我們會寄一條登入連結給您，不需要密碼。"
   },
   "roster": {
     "title": "選手名冊",
@@ -453,10 +465,11 @@
     "firstTimeHint": "選一個範本，系統先把項目整份產生好，您再把不辦的關掉——這比從空白一項一項建快得多。",
     "template": "範本",
     "templates": {
-      "ballroom": "國標舞（拉丁、標準）"
+      "ballroom": "通用國標舞（自動組合）",
+      "ballroomTw": "國標舞（台灣賽事範本）"
     },
     "chooseItems": "要辦哪些項目",
-    "chooseHint": "預設全部打開。不辦的取消勾選就好。三項沒有預設，因為各地舞科組合不一樣，之後可以自己新增。",
+    "chooseHint": "預設全部打開，有上次的選擇就帶入。不辦的取消勾選就好，每個分類也可以整組打開或關掉。",
     "allOn": "全部打開",
     "allOff": "全部關掉",
     "apply": "產生這些項目",
@@ -496,7 +509,9 @@
       "alreadyEntered": "已經有人報名，不能清掉重來。",
       "sameCompetition": "不能複製自己。",
       "unknownTemplate": "找不到這個範本。",
-      "nothingChosen": "至少要留一個項目。"
+      "nothingChosen": "至少要留一個項目。",
+      "templateNameRequired": "請幫這個範本取個名字。",
+      "nothingToSave": "這場比賽還沒有組別，沒有東西可以存。"
     },
     "dances": {
       "chaCha": "恰恰",
@@ -513,7 +528,82 @@
     "rowDances": "{count} 支舞",
     "rowAgeMax": "{age} 歲以下",
     "rowAgeMin": "{age} 歲以上",
-    "sourceOption": "{name} · {count} 個項目"
+    "sourceOption": "{name} · {count} 個項目",
+    "tw": {
+      "asiaProOpenLatin": "亞洲職業公開組(拉丁舞五項)",
+      "asiaProOpenStandard": "亞洲職業公開組(標準舞五項)",
+      "intlProOpenLatin": "國際職業公開組(拉丁舞五項)",
+      "intlProOpenStandard": "國際職業公開組(標準舞五項)",
+      "domesticProLatin": "國內職業組(拉丁舞五項)",
+      "domesticProStandard": "國內職業組(標準舞五項)",
+      "pro50OpenLatin": "50歲以上職業公開組(拉丁舞五項)",
+      "domesticAmLatin": "國內業餘組(拉丁舞五項)",
+      "domesticAmStandard": "國內業餘組(標準舞五項)",
+      "asiaAmOpenLatin": "亞洲業餘公開組(拉丁舞五項)",
+      "asiaAmOpenStandard": "亞洲業餘公開組(標準舞五項)",
+      "intlAmOpenLatin": "國際業餘公開組(拉丁舞五項)",
+      "intlAmOpenStandard": "國際業餘公開組(標準舞五項)",
+      "u10SoloLatin": "U10單人三項公開組(拉丁舞三項)",
+      "u10SoloStandard": "U10單人三項公開組(標準舞三項)",
+      "u12SoloLatin": "U12單人四項公開組(拉丁舞四項)",
+      "u12SoloStandard": "U12單人四項公開組(標準舞四項)",
+      "u15SoloLatin": "U15單人全能公開組(拉丁舞五項)",
+      "u15SoloStandard": "U15單人全能公開組(標準舞五項)",
+      "u18SoloLatin": "U18單人全能公開組(拉丁舞五項)",
+      "u18SoloStandard": "U18單人全能公開組(標準舞五項)",
+      "u15CoupleLatin": "U15雙人公開組(拉丁舞四項)",
+      "u15CoupleStandard": "U15雙人公開組(標準舞四項)",
+      "u18CoupleStandard": "U18雙人全能公開組(標準舞五項)",
+      "u21CoupleStandard": "U21雙人全能公開組(標準舞五項)",
+      "adultSoloLatin": "成人單人全能公開組(拉丁舞五項)",
+      "adultSoloStandard": "成人單人全能公開組(標準舞五項)",
+      "seniorSoloLatin": "壯年單人公開組(拉丁舞三項)",
+      "seniorSoloStandard": "壯年單人公開組(標準舞三項)",
+      "seniorLatin": "壯年公開組(拉丁舞四項)",
+      "seniorStandard": "壯年公開組(標準舞四項)",
+      "dreamStdW": "PRO-AM 圓夢公開組(標準舞單項W)",
+      "dreamStdF": "PRO-AM 圓夢公開組(標準舞單項F)",
+      "dreamStdT": "PRO-AM 圓夢公開組(標準舞單項T)",
+      "dreamStdQ": "PRO-AM 圓夢公開組(標準舞單項Q)",
+      "dreamStdVW": "PRO-AM 圓夢公開組(標準舞單項VW)",
+      "dreamLatC": "PRO-AM 圓夢公開組(拉丁舞單項C)",
+      "dreamLatR": "PRO-AM 圓夢公開組(拉丁舞單項R)",
+      "dreamLatJ": "PRO-AM 圓夢公開組(拉丁舞單項J)",
+      "dreamLatS": "PRO-AM 圓夢公開組(拉丁舞單項S)",
+      "dreamLatP": "PRO-AM 圓夢公開組(拉丁舞單項P)",
+      "growthLatC": "PRO-AM 成長公開組(拉丁舞單項C)",
+      "growthLatR": "PRO-AM 成長公開組(拉丁舞單項R)",
+      "growthLatJ": "PRO-AM 成長公開組(拉丁舞單項J)",
+      "growthLatP": "PRO-AM 成長公開組(拉丁舞單項P)",
+      "growthLatS": "PRO-AM 成長公開組(拉丁舞單項S)"
+    },
+    "genres": {
+      "ballroom": "國標舞"
+    },
+    "categories": {
+      "pro": "職業",
+      "amateur": "業餘",
+      "youthSolo": "青少年單人",
+      "youthCouple": "青少年雙人",
+      "adultSolo": "成人單人",
+      "senior": "壯年",
+      "proamDream": "PRO-AM 圓夢",
+      "proamGrowth": "PRO-AM 成長",
+      "latin": "拉丁舞",
+      "standard": "標準舞",
+      "proAm": "師生組",
+      "uncategorised": "未分類"
+    },
+    "genre": "類型",
+    "myTemplates": "我的範本",
+    "saveAsMine": "存成我的範本",
+    "saveAsMineHint": "把這場比賽現在的組別、舞科、年齡、人數與收費方案存起來，下次辦別場比賽可以從「我的範本」一鍵套回來。名稱相同會覆蓋舊的。",
+    "saveName": "範本名稱",
+    "savedAs": "已存成範本「{name}」。",
+    "deletedTemplate": "已刪除這個範本。",
+    "deleteSaved": "刪除",
+    "planTitle": "{name}的收費",
+    "remembered": "已帶入上次用這個範本時的選擇。"
   },
   "export": {
     "button": "匯出 Excel",
@@ -621,6 +711,12 @@
       "checkin_entry": "檢錄：點名／報到",
       "checkin_resplit_round_dance": "檢錄：重新分批",
       "desk_report": "報到：登記選手到場"
+    }
+  },
+  "mail": {
+    "loginLink": {
+      "subject": "{site} 登入連結",
+      "body": "您好，\n\n請點下面的連結登入 {site}（{minutes} 分鐘內有效，只能使用一次）：\n\n{link}\n\n如果不是您本人操作，請直接忽略這封信。"
     }
   }
 }

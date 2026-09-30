@@ -1,0 +1,14 @@
+<h1><%= t('entrant.signIn') %></h1>
+<% if (!valid) { %>
+  <div class="notice bad"><%= t('entrant.errors.linkInvalid') %></div>
+  <p><a class="btn" href="/entrant/login"><%= t('entrant.sendNewLink') %></a></p>
+<% } else { %>
+  <%# 只有按下按鈕（POST）才會用掉連結。 %>
+  <%# Only pressing the button (a POST) consumes the link. %>
+  <form class="card" method="post" action="/entrant/link">
+    <p><%= t('entrant.linkConfirm') %></p>
+    <input type="hidden" name="token" value="<%= token %>">
+    <input type="hidden" name="next" value="<%= next %>">
+    <p><button type="submit"><%= t('entrant.signIn') %></button></p>
+  </form>
+<% } %>

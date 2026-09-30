@@ -220,7 +220,7 @@ test('PayPal webhook：沒設 webhook ID 一律不採信，設了要 PayPal 說 
 });
 
 test('網址層：回程網址向 PayPal 查證後導回報名頁 / the return URL verifies then redirects, over real HTTP', async () => {
-  const { result } = await enter('paypal');
+  const { result, me } = await enter('paypal');
   const provider = fakeFetch(paypalHandlers());
   await onlinePay.startApi({ provider: 'paypal', checkout: result.checkout, fetchImpl: provider });
 
@@ -234,6 +234,12 @@ test('網址層：回程網址向 PayPal 查證後導回報名頁 / the return U
     assert.equal(res.status, 303);
     assert.equal(res.headers.get('location'), `/r/${result.registration.id}`);
     assert.equal((await regs.getRegistration(result.registration.id)).status, 'paid');
+
+    // 回程之後的報名頁只有本人（同一個瀏覽器的 cookie）看得到，匿名的人是 404。
+    // The page after the return is visible only to the owner's browser; an anonymous visitor gets 404.
+    const landed = await server.get(res.headers.get('location'), { headers: { cookie: me.cookie } });
+    assert.equal(landed.status, 200);
+    assert.equal((await server.get(res.headers.get('location'))).status, 404);
 
     const junk = await server.get('/pay/ecpay/return/1');
     assert.equal(junk.headers.get('location'), '/', 'form-style providers have no return route');

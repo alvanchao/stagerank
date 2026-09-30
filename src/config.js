@@ -34,6 +34,30 @@ const int = (v, dflt) => (v === undefined || v === '' ? dflt : Number.parseInt(v
 // An empty string means "not set": ECPay/NewebPay platform IDs must stay blank until a contract exists.
 const str = (v, dflt = '') => (v === undefined || v.trim() === '' ? dflt : v.trim());
 
+function makeMailConfig({ smtpUrl, from, mode }) {
+  const resolve = (wanted) => {
+    if (wanted === 'smtp') return mail.smtpUrl && mail.from ? 'smtp' : 'off';
+    if (wanted === 'memory') return 'memory';
+    return 'off';
+  };
+  const mail = {
+    smtpUrl,
+    from,
+    // 真的 SMTP 優先；沒有才看 MAIL_MODE=memory；否則關閉。
+    // Real SMTP wins; otherwise MAIL_MODE=memory; otherwise off.
+    mode: smtpUrl && from ? 'smtp' : (mode === 'memory' ? 'memory' : 'off'),
+    // 測試用：在同一個行程裡切換模式，不必重讀環境變數。
+    // For tests: switch the mode inside one process without re-reading the environment.
+    setMode(next) {
+      mail.mode = resolve(next);
+    },
+    get enabled() {
+      return mail.mode !== 'off';
+    },
+  };
+  return mail;
+}
+
 export const config = {
   env: str(env.NODE_ENV, 'development'),
   port: int(env.PORT, 3000),
@@ -52,6 +76,18 @@ export const config = {
   // Signs the entrant's login cookie. Left unset it is random per boot: safe, but everyone has
   // to sign in again after a restart.
   sessionSecret: str(env.SESSION_SECRET, '') || randomBytes(32).toString('hex'),
+
+  // 寄信：設了 SMTP_URL 和 MAIL_FROM 就真的寄（nodemailer）；MAIL_MODE=memory 只放在記憶體
+  // （開發與測試用，不會真的寄出）；都沒設就關閉，網站照舊用信箱＋密碼登入。
+  // 注意 NODE_ENV=test 本身不會打開寄信，測試要用 memory 必須明確設定。
+  // Mail: with SMTP_URL and MAIL_FROM mail is really sent (nodemailer); MAIL_MODE=memory keeps it in
+  // memory (development and tests, nothing leaves the machine); with neither, mail is off and the
+  // site keeps its email + password sign-in. NODE_ENV=test alone does not turn mail on.
+  mail: makeMailConfig({
+    smtpUrl: str(env.SMTP_URL, ''),
+    from: str(env.MAIL_FROM, ''),
+    mode: str(env.MAIL_MODE, ''),
+  }),
 
   database: {
     url: str(env.DATABASE_URL, 'postgres://postgres:devpass@127.0.0.1:5432/stagerank'),

@@ -1,7 +1,7 @@
 <h1><%= t('entrant.title') %></h1>
 <p class="small muted">
   <%= entrant.email %><% if (entrant.unit_name) { %> · <%= entrant.unit_name %><% } %>
-  · <a href="/entrant/password"><%= t('entrant.changePassword') %></a>
+  <% if (!config.mail.enabled) { %>· <a href="/entrant/password"><%= t('entrant.changePassword') %></a><% } %>
 </p>
 
 <% if (error) { %><div class="notice bad"><%= t(error, typeof errorParams !== 'undefined' ? errorParams : null) %></div><% } %>

@@ -428,7 +428,10 @@ browserTest('套範本：關掉不辦的，剩下的一次生出來 / the templa
     await page.waitForLoadState('networkidle');
     await page.goto(`${http.base}/admin/c/${competition.id}/setup`);
 
-    const boxes = page.locator('#planList input[type=checkbox]');
+    // 預設選中的是資料目錄的範本；這個測試走「通用國標舞（自動組合）」那條。
+    // The preselected template is the catalogue one; this test takes the generic auto-combined road.
+    await page.selectOption('#templateKey', 'ballroom');
+    const boxes = page.locator('.plan-panel:not([hidden]) input[type=checkbox]');
     const total = await boxes.count();
     assert.ok(total > 50, `the template offers a useful list, got ${total}`);
 

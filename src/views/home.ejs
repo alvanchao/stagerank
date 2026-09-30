@@ -1,3 +1,48 @@
+<%# 頁首：沒登入就是註冊、登入；登入了就是「我的報名」。 %>
+<%# Top of the page: sign up and sign in when signed out, "my entries" when signed in. %>
+<% if (!entrant) { %>
+  <div class="card" id="homeAccount">
+    <p class="small muted"><%= t('home.signedOutHint') %></p>
+    <p>
+      <a class="btn" href="/entrant/signup"><%= t('home.signUp') %></a>
+      <a class="btn ghost" href="/entrant/login"><%= t('home.signIn') %></a>
+    </p>
+  </div>
+<% } else { %>
+  <div class="card" id="myEntries">
+    <h2 style="margin-top:0"><%= t('home.myEntries') %></h2>
+    <% if (entries.length === 0) { %>
+      <p class="muted"><%= t('entrant.noEntries') %></p>
+    <% } else { %>
+      <table>
+        <tr>
+          <th><%= t('entrant.competition') %></th>
+          <th><%= t('register.athleteName') %></th>
+          <th><%= t('register.division') %></th>
+          <th><%= t('common.status') %></th>
+          <th><%= t('common.amount') %></th>
+          <th></th>
+        </tr>
+        <% entries.forEach(function (r) { %>
+          <tr>
+            <td><%= r.competition_name %></td>
+            <td><%= r.athlete_name %></td>
+            <td><%= r.division_name %></td>
+            <td><span class="pill <%= r.status === 'paid' ? 'ok' : (r.status === 'pending' ? 'warn' : 'bad') %>"><%= t('registration.status.' + r.status) %></span></td>
+            <td><%= r.amount_cents > 0 ? money(r.amount_cents, r.currency)
+                    : (r.fee_mode === 'tiered' ? t('register.includedInPlan') : t('common.free')) %></td>
+            <td><a href="/r/<%= r.id %>"><%= t('home.viewEntry') %></a></td>
+          </tr>
+        <% }); %>
+      </table>
+    <% } %>
+    <form method="post" action="/entrant/logout" style="margin-top:12px">
+      <a class="btn ghost" href="/entrant"><%= t('home.roster') %></a>
+      <button type="submit" class="ghost"><%= t('entrant.signOut') %></button>
+    </form>
+  </div>
+<% } %>
+
 <h1><%= t('home.title') %></h1>
 
 <% if (competitions.length === 0) { %>

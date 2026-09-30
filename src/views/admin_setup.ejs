@@ -20,6 +20,20 @@
     <p><a class="btn" href="/admin/c/<%= competition.id %>"><%= t('competition.divisions') %></a></p>
   </div>
 
+  <%# 存成我的範本：下次辦別場比賽，可以從「我的範本」一鍵套回來。 %>
+  <%# Save as my template: next time, another competition can start from "My templates". %>
+  <h2><%= t('setup.saveAsMine') %></h2>
+  <div class="card">
+    <p class="small muted"><%= t('setup.saveAsMineHint') %></p>
+    <form method="post" action="/admin/c/<%= competition.id %>/setup/save-template" class="division-form">
+      <div class="field grow">
+        <label for="tplName"><%= t('setup.saveName') %></label>
+        <input id="tplName" type="text" name="name" required maxlength="80" value="<%= competition.name %>">
+      </div>
+      <button type="submit"><%= t('setup.saveAsMine') %></button>
+    </form>
+  </div>
+
   <h2><%= t('setup.clear') %></h2>
   <div class="card">
     <% if (canClear) { %>
@@ -53,87 +67,165 @@
     <h3 style="margin-top:0; font-size:16px"><%= t('setup.firstTime') %></h3>
     <p class="small muted"><%= t('setup.firstTimeHint') %></p>
 
-    <form method="post" action="/admin/c/<%= competition.id %>/setup/template">
-      <input type="hidden" name="templateKey" value="ballroom">
-
-      <h4 style="font-size:15px; margin-bottom:4px"><%= t('setup.generalPlan') %></h4>
+    <form method="post" action="/admin/c/<%= competition.id %>/setup/template" id="tplForm">
+      <%# 第 1 層類型 → 範本；第 2 層分類、第 3 層組別在下面的清單。 %>
+      <%# Level 1 genre -> template; level 2 categories and level 3 divisions are in the list below. %>
       <div class="division-form">
         <div class="field">
-          <label for="gb"><%= t('admin.baseFee') %></label>
-          <input id="gb" type="text" inputmode="numeric" name="generalBase" value="1800" style="width:96px">
+          <label for="genreSelect"><%= t('setup.genre') %></label>
+          <select id="genreSelect">
+            <% picker.genres.forEach(function (g) { %>
+              <option value="<%= g.key %>"><%= g.label %></option>
+            <% }); %>
+          </select>
         </div>
-        <div class="field">
-          <label for="gi"><%= t('admin.baseIncludes') %></label>
-          <input id="gi" type="text" inputmode="numeric" name="generalIncludes" value="2" style="width:72px">
-        </div>
-        <div class="field">
-          <label for="ge"><%= t('admin.extraItemFee') %></label>
-          <input id="ge" type="text" inputmode="numeric" name="generalExtra" value="600" style="width:96px">
+        <div class="field grow">
+          <label for="templateKey"><%= t('setup.template') %></label>
+          <select id="templateKey" name="templateKey">
+            <% picker.panels.forEach(function (panel) { %>
+              <option value="<%= panel.key %>" data-genre="<%= panel.genre %>" <%= panel.key === picker.selected ? 'selected' : '' %>><%= panel.label %></option>
+            <% }); %>
+          </select>
         </div>
       </div>
 
-      <h4 style="font-size:15px; margin:16px 0 4px"><%= t('setup.proAmPlan') %></h4>
-      <div class="division-form">
-        <div class="field">
-          <label for="pb"><%= t('admin.baseFee') %></label>
-          <input id="pb" type="text" inputmode="numeric" name="proAmBase" value="2500" style="width:96px">
-        </div>
-        <div class="field">
-          <label for="pi"><%= t('admin.baseIncludes') %></label>
-          <input id="pi" type="text" inputmode="numeric" name="proAmIncludes" value="1" style="width:72px">
-        </div>
-        <div class="field">
-          <label for="pe"><%= t('admin.extraItemFee') %></label>
-          <input id="pe" type="text" inputmode="numeric" name="proAmExtra" value="1200" style="width:96px">
-        </div>
-      </div>
+      <% picker.panels.forEach(function (panel) { %>
+        <% const active = panel.key === picker.selected; %>
+        <section class="plan-panel" id="planList-<%= panel.key.replace(/[^A-Za-z0-9_-]/g, '_') %>" data-template="<%= panel.key %>" <%= active ? '' : 'hidden' %>>
+          <% if (panel.remembered) { %><p class="small muted"><%= t('setup.remembered') %></p><% } %>
 
-      <h4 style="font-size:15px; margin:20px 0 4px"><%= t('setup.chooseItems') %></h4>
-      <p class="small muted"><%= t('setup.chooseHint') %></p>
+          <% panel.plans.forEach(function (plan) { %>
+            <h4 style="font-size:15px; margin:16px 0 4px"><%= t('setup.planTitle', { name: plan.name }) %></h4>
+            <div class="division-form">
+              <div class="field">
+                <label><%= t('admin.baseFee') %></label>
+                <input type="text" inputmode="numeric" name="plan_<%= plan.key %>_base" value="<%= plan.base %>" style="width:96px" <%= active ? '' : 'disabled' %>>
+              </div>
+              <div class="field">
+                <label><%= t('admin.baseIncludes') %></label>
+                <input type="text" inputmode="numeric" name="plan_<%= plan.key %>_includes" value="<%= plan.includes %>" style="width:72px" <%= active ? '' : 'disabled' %>>
+              </div>
+              <div class="field">
+                <label><%= t('admin.extraItemFee') %></label>
+                <input type="text" inputmode="numeric" name="plan_<%= plan.key %>_extra" value="<%= plan.extra %>" style="width:96px" <%= active ? '' : 'disabled' %>>
+              </div>
+            </div>
+          <% }); %>
+
+          <h4 style="font-size:15px; margin:20px 0 4px"><%= t('setup.chooseItems') %></h4>
+          <% panel.categories.forEach(function (cat) { %>
+            <div class="plan-cat" data-cat="<%= cat.key %>">
+              <h5 style="margin:16px 0 0; font-size:14px">
+                <%= cat.label %>
+                <span class="small muted">(<%= cat.rows.length %>)</span>
+                <button type="button" class="ghost small cat-on"><%= t('setup.allOn') %></button>
+                <button type="button" class="ghost small cat-off"><%= t('setup.allOff') %></button>
+              </h5>
+              <% cat.rows.forEach(function (row) { %>
+                <label class="roster-pick">
+                  <input type="checkbox" name="keys" value="<%= row.key %>" <%= row.checked ? 'checked' : '' %> <%= active ? '' : 'disabled' %>>
+                  <span class="roster-name"><%= row.name %></span>
+                  <span class="small muted">
+                    <%= t('setup.rowDances', { count: row.dances.length }) %>
+                    · <%= t('admin.entryKind.' + kindOf({ member_min: row.memberMin, member_max: row.memberMax })) %><%
+                    %><% if (row.ageMax) { %> · <%= t('setup.rowAgeMax', { age: row.ageMax }) %><% } %><%
+                    %><% if (row.ageMin) { %> · <%= t('setup.rowAgeMin', { age: row.ageMin }) %><% } %>
+                  </span>
+                </label>
+              <% }); %>
+            </div>
+          <% }); %>
+        </section>
+      <% }); %>
+
+      <p class="small muted" style="margin-top:20px"><%= t('setup.chooseHint') %></p>
       <p>
         <button type="button" class="ghost small" id="allOn"><%= t('setup.allOn') %></button>
         <button type="button" class="ghost small" id="allOff"><%= t('setup.allOff') %></button>
         <span class="small muted" id="chosenCount"></span>
       </p>
 
-      <div id="planList">
-        <% plan.forEach(function (row) { %>
-          <label class="roster-pick">
-            <input type="checkbox" name="keys" value="<%= row.key %>" checked>
-            <span class="roster-name"><%= row.name %></span>
-            <span class="small muted">
-              <%= t('setup.rowDances', { count: row.dances.length }) %><%
-              %><% if (row.ageMax) { %> · <%= t('setup.rowAgeMax', { age: row.ageMax }) %><% } %><%
-              %><% if (row.ageMin) { %> · <%= t('setup.rowAgeMin', { age: row.ageMin }) %><% } %>
-            </span>
-          </label>
-        <% }); %>
-      </div>
-
       <p style="margin-top:20px"><button type="submit"><%= t('setup.apply') %></button></p>
     </form>
+
+    <% if (saved.length > 0) { %>
+      <h4 style="font-size:15px; margin:24px 0 4px"><%= t('setup.myTemplates') %></h4>
+      <% saved.forEach(function (row) { %>
+        <form method="post" action="/admin/c/<%= competition.id %>/setup/saved/<%= row.id %>/delete" style="display:flex; gap:8px; align-items:center; margin:4px 0">
+          <span><%= row.name %></span>
+          <button type="submit" class="ghost small"><%= t('setup.deleteSaved') %></button>
+        </form>
+      <% }); %>
+    <% } %>
   </div>
 <% } %>
 
 <script>
   (function () {
-    var list = document.getElementById('planList');
-    if (!list) return;
-    var boxes = Array.prototype.slice.call(list.querySelectorAll('input[type=checkbox]'));
+    var form = document.getElementById('tplForm');
+    if (!form) return;
+    var panels = Array.prototype.slice.call(form.querySelectorAll('.plan-panel'));
+    var select = document.getElementById('templateKey');
+    var genre = document.getElementById('genreSelect');
     var count = document.getElementById('chosenCount');
 
+    function active() {
+      return panels.filter(function (p) { return !p.hidden; })[0] || null;
+    }
+    function boxesOf(root) {
+      return Array.prototype.slice.call(root.querySelectorAll('input[type=checkbox]'));
+    }
     function refresh() {
+      var panel = active();
+      if (!panel) return;
+      var boxes = boxesOf(panel);
       var on = boxes.filter(function (b) { return b.checked; }).length;
       count.textContent = on + ' / ' + boxes.length;
     }
-    function setAll(value) {
-      boxes.forEach(function (b) { b.checked = value; });
+    // 只有目前這個範本的欄位會送出：其他的關掉，不然會一起被送出去。
+    // Only the current template's fields are submitted; the others are disabled so they do not go along.
+    function show(key) {
+      panels.forEach(function (p) {
+        var on = p.getAttribute('data-template') === key;
+        p.hidden = !on;
+        Array.prototype.forEach.call(p.querySelectorAll('input'), function (i) { i.disabled = !on; });
+      });
+      refresh();
+    }
+    function filterGenre() {
+      var wanted = genre.value;
+      var first = null;
+      Array.prototype.forEach.call(select.options, function (o) {
+        var match = o.getAttribute('data-genre') === wanted;
+        o.hidden = !match;
+        o.disabled = !match;
+        if (match && !first) first = o;
+      });
+      var current = select.options[select.selectedIndex];
+      if (current && current.disabled && first) select.value = first.value;
+      show(select.value);
+    }
+    function setAll(root, value) {
+      boxesOf(root).forEach(function (b) { b.checked = value; });
       refresh();
     }
 
-    document.getElementById('allOn').addEventListener('click', function () { setAll(true); });
-    document.getElementById('allOff').addEventListener('click', function () { setAll(false); });
-    list.addEventListener('change', refresh);
-    refresh();
+    document.getElementById('allOn').addEventListener('click', function () { var p = active(); if (p) setAll(p, true); });
+    document.getElementById('allOff').addEventListener('click', function () { var p = active(); if (p) setAll(p, false); });
+    form.addEventListener('click', function (e) {
+      var cat = e.target.closest ? e.target.closest('.plan-cat') : null;
+      if (!cat) return;
+      if (e.target.classList.contains('cat-on')) setAll(cat, true);
+      if (e.target.classList.contains('cat-off')) setAll(cat, false);
+    });
+    form.addEventListener('change', refresh);
+    select.addEventListener('change', function () { show(select.value); });
+    genre.addEventListener('change', filterGenre);
+
+    // 開頁時把類型選單對到目前範本的類型。
+    // On load, point the genre picker at the current template's genre.
+    var current = select.options[select.selectedIndex];
+    if (current) genre.value = current.getAttribute('data-genre');
+    filterGenre();
   })();
 </script>

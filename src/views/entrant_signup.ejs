@@ -8,9 +8,11 @@
   <input id="email" type="email" name="email" required maxlength="180" value="<%= form.email || '' %>">
   <p class="small muted"><%= t('entrant.emailWhy') %></p>
 
-  <label for="password"><%= t('entrant.password') %></label>
-  <input id="password" type="password" name="password" required minlength="8">
-  <p class="small muted"><%= t('entrant.passwordHint') %></p>
+  <% if (!mailMode) { %>
+    <label for="password"><%= t('entrant.password') %></label>
+    <input id="password" type="password" name="password" required minlength="8">
+    <p class="small muted"><%= t('entrant.passwordHint') %></p>
+  <% } %>
 
   <label for="unitName"><%= t('entrant.unitName') %></label>
   <input id="unitName" type="text" name="unitName" maxlength="120" value="<%= form.unitName || '' %>">

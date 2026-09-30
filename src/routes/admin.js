@@ -120,7 +120,8 @@ async function renderSetup(req, res, { error = null, errorParams = null, message
     divisions,
     feeGroups: await feeGroups.listGroups(competitionId),
     sources: await setup.copyableCompetitions(competitionId),
-    plan: setup.planFor({ templateKey: 'ballroom', t: res.locals.t }),
+    picker: await setup.pickerModel({ t: res.locals.t, locale: req.locale }),
+    saved: await setup.listSaved(),
     canClear: await setup.canClear(competitionId),
     error,
     errorParams,
@@ -140,7 +141,7 @@ function setupError(err, req, res, next) {
 router.get('/c/:id/setup', requireAdmin, (req, res, next) => {
   renderSetup(req, res, {
     message: req.query.done ? `setup.${req.query.done}` : null,
-    messageParams: req.query.count ? { count: req.query.count } : null,
+    messageParams: { count: req.query.count || 0, name: req.query.name || '' },
   }).catch(next);
 });
 
@@ -160,23 +161,52 @@ router.post('/c/:id/setup/template', requireAdmin, async (req, res, next) => {
   try {
     const picked = req.body.keys;
     const keys = picked === undefined ? [] : (Array.isArray(picked) ? picked : [picked]);
+    const templateKey = req.body.templateKey || 'ballroom';
+    // 收費方案欄位依範本宣告的方案 key 命名：plan_<key>_base / _includes / _extra。
+    // Fee plan fields are named after the plans the template declares: plan_<key>_base / _includes / _extra.
+    const template = await setup.resolveTemplate(templateKey);
+    const meta = setup.planMeta({ templateKey, t: res.locals.t, template });
+    const plans = {};
+    for (const key of Object.keys(meta.plans)) {
+      plans[key] = {
+        base: Number.parseInt(req.body[`plan_${key}_base`], 10) || 0,
+        includes: Number.parseInt(req.body[`plan_${key}_includes`], 10) || 1,
+        extra: Number.parseInt(req.body[`plan_${key}_extra`], 10) || 0,
+      };
+    }
     const result = await setup.applyTemplate({
       competitionId: Number.parseInt(req.params.id, 10),
-      templateKey: req.body.templateKey || 'ballroom',
+      templateKey,
       keys,
       t: res.locals.t,
-      generalPlan: {
-        baseFeeCents: Number.parseInt(req.body.generalBase, 10) || 0,
-        baseIncludes: Number.parseInt(req.body.generalIncludes, 10) || 1,
-        extraItemFeeCents: Number.parseInt(req.body.generalExtra, 10) || 0,
-      },
-      proAmPlan: {
-        baseFeeCents: Number.parseInt(req.body.proAmBase, 10) || 0,
-        baseIncludes: Number.parseInt(req.body.proAmIncludes, 10) || 1,
-        extraItemFeeCents: Number.parseInt(req.body.proAmExtra, 10) || 0,
-      },
+      locale: req.locale,
+      plans,
     });
     return res.redirect(303, `/admin/c/${req.params.id}/setup?done=applied&count=${result.created}`);
+  } catch (err) {
+    return setupError(err, req, res, next);
+  }
+});
+
+// 把目前的組別存成「我的範本」。
+// Save the current divisions as "my template".
+router.post('/c/:id/setup/save-template', requireAdmin, async (req, res, next) => {
+  try {
+    const saved = await setup.saveAsTemplate({
+      competitionId: Number.parseInt(req.params.id, 10),
+      name: req.body.name,
+      t: res.locals.t,
+    });
+    return res.redirect(303, `/admin/c/${req.params.id}/setup?done=savedAs&name=${encodeURIComponent(saved.name)}`);
+  } catch (err) {
+    return setupError(err, req, res, next);
+  }
+});
+
+router.post('/c/:id/setup/saved/:savedId/delete', requireAdmin, async (req, res, next) => {
+  try {
+    await setup.deleteSaved(Number.parseInt(req.params.savedId, 10));
+    return res.redirect(303, `/admin/c/${req.params.id}/setup?done=deletedTemplate`);
   } catch (err) {
     return setupError(err, req, res, next);
   }

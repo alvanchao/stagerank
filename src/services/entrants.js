@@ -69,6 +69,28 @@ export async function signUp({ email, password, unitName = null, contactName = n
   );
 }
 
+// 免密碼註冊（寄信模式）：只要信箱。密碼欄塞一個沒人知道的隨機值，所以這個帳號
+// 不可能用密碼登入，只能靠寄到信箱的連結。信箱已經註冊過就不動它，回傳 created:false，
+// 呼叫的人照樣寄連結，畫面上看不出「新註冊」與「本來就有」的差別。
+// Passwordless sign-up (mail mode): an email address is all it takes. The password column gets a
+// random value nobody knows, so the account can only be entered through the emailed link. An
+// address that already exists is left alone and reported as created:false; the caller mails a link
+// either way, so the screen cannot tell "new" from "already there".
+export async function signUpByEmail({ email, unitName = null, contactName = null, phone = null }) {
+  const address = normaliseEmail(email);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) throw new EntrantError('entrant.errors.emailInvalid');
+
+  const existing = await one('SELECT * FROM entrants WHERE lower(email) = $1', [address]);
+  if (existing) return { entrant: existing, created: false };
+
+  const entrant = await one(
+    `INSERT INTO entrants (email, password_hash, unit_name, contact_name, phone)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [address, hashPassword(randomBytes(32).toString('hex')), unitName || null, contactName || null, phone || null],
+  );
+  return { entrant, created: true };
+}
+
 export async function signIn({ email, password }) {
   const entrant = await one('SELECT * FROM entrants WHERE lower(email) = $1', [normaliseEmail(email)]);
   // 帳號不存在和密碼錯誤回同一個訊息，免得有人拿登入頁去試哪些信箱註冊過。
@@ -165,6 +187,7 @@ export default {
   verifyPassword,
   normaliseEmail,
   signUp,
+  signUpByEmail,
   signIn,
   changePassword,
   resetPassword,

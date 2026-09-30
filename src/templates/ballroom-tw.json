@@ -1,0 +1,596 @@
+{
+  "key": "ballroom-tw",
+  "genre": "ballroom",
+  "labelKey": "setup.templates.ballroomTw",
+  "nameKeyPrefix": "setup.tw",
+  "dances": [
+    {
+      "key": "chaCha",
+      "style": "latin"
+    },
+    {
+      "key": "samba",
+      "style": "latin"
+    },
+    {
+      "key": "rumba",
+      "style": "latin"
+    },
+    {
+      "key": "pasoDoble",
+      "style": "latin"
+    },
+    {
+      "key": "jive",
+      "style": "latin"
+    },
+    {
+      "key": "waltz",
+      "style": "standard"
+    },
+    {
+      "key": "tango",
+      "style": "standard"
+    },
+    {
+      "key": "vienneseWaltz",
+      "style": "standard"
+    },
+    {
+      "key": "slowFoxtrot",
+      "style": "standard"
+    },
+    {
+      "key": "quickstep",
+      "style": "standard"
+    }
+  ],
+  "danceSets": {
+    "L5": [
+      "chaCha",
+      "samba",
+      "rumba",
+      "pasoDoble",
+      "jive"
+    ],
+    "L4": [
+      "chaCha",
+      "samba",
+      "rumba",
+      "jive"
+    ],
+    "L3": [
+      "chaCha",
+      "rumba",
+      "jive"
+    ],
+    "S5": [
+      "waltz",
+      "tango",
+      "vienneseWaltz",
+      "slowFoxtrot",
+      "quickstep"
+    ],
+    "S4": [
+      "waltz",
+      "tango",
+      "slowFoxtrot",
+      "quickstep"
+    ],
+    "S3": [
+      "waltz",
+      "tango",
+      "quickstep"
+    ]
+  },
+  "plans": {
+    "general": {
+      "base": 1800,
+      "includes": 2,
+      "extra": 600
+    },
+    "proAm": {
+      "base": 2500,
+      "includes": 1,
+      "extra": 1200
+    }
+  },
+  "categories": [
+    {
+      "key": "pro",
+      "divisions": [
+        {
+          "key": "asiaProOpenLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "asiaProOpenStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "intlProOpenLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "intlProOpenStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "domesticProLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "domesticProStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "pro50OpenLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        }
+      ]
+    },
+    {
+      "key": "amateur",
+      "divisions": [
+        {
+          "key": "domesticAmLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "domesticAmStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "asiaAmOpenLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "asiaAmOpenStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "intlAmOpenLatin",
+          "set": "L5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "intlAmOpenStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        }
+      ]
+    },
+    {
+      "key": "youthSolo",
+      "divisions": [
+        {
+          "key": "u10SoloLatin",
+          "set": "L3",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 10,
+          "plan": "general"
+        },
+        {
+          "key": "u10SoloStandard",
+          "set": "S3",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 10,
+          "plan": "general"
+        },
+        {
+          "key": "u12SoloLatin",
+          "set": "L4",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 12,
+          "plan": "general"
+        },
+        {
+          "key": "u12SoloStandard",
+          "set": "S4",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 12,
+          "plan": "general"
+        },
+        {
+          "key": "u15SoloLatin",
+          "set": "L5",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 15,
+          "plan": "general"
+        },
+        {
+          "key": "u15SoloStandard",
+          "set": "S5",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 15,
+          "plan": "general"
+        },
+        {
+          "key": "u18SoloLatin",
+          "set": "L5",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 18,
+          "plan": "general"
+        },
+        {
+          "key": "u18SoloStandard",
+          "set": "S5",
+          "members": [
+            1,
+            1
+          ],
+          "ageMax": 18,
+          "plan": "general"
+        }
+      ]
+    },
+    {
+      "key": "youthCouple",
+      "divisions": [
+        {
+          "key": "u15CoupleLatin",
+          "set": "L4",
+          "members": [
+            2,
+            2
+          ],
+          "ageMax": 15,
+          "plan": "general"
+        },
+        {
+          "key": "u15CoupleStandard",
+          "set": "S4",
+          "members": [
+            2,
+            2
+          ],
+          "ageMax": 15,
+          "plan": "general"
+        },
+        {
+          "key": "u18CoupleStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "ageMax": 18,
+          "plan": "general"
+        },
+        {
+          "key": "u21CoupleStandard",
+          "set": "S5",
+          "members": [
+            2,
+            2
+          ],
+          "ageMax": 21,
+          "plan": "general"
+        }
+      ]
+    },
+    {
+      "key": "adultSolo",
+      "divisions": [
+        {
+          "key": "adultSoloLatin",
+          "set": "L5",
+          "members": [
+            1,
+            1
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "adultSoloStandard",
+          "set": "S5",
+          "members": [
+            1,
+            1
+          ],
+          "plan": "general"
+        }
+      ]
+    },
+    {
+      "key": "senior",
+      "divisions": [
+        {
+          "key": "seniorSoloLatin",
+          "set": "L3",
+          "members": [
+            1,
+            1
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "seniorSoloStandard",
+          "set": "S3",
+          "members": [
+            1,
+            1
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "seniorLatin",
+          "set": "L4",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        },
+        {
+          "key": "seniorStandard",
+          "set": "S4",
+          "members": [
+            2,
+            2
+          ],
+          "plan": "general"
+        }
+      ]
+    },
+    {
+      "key": "proamDream",
+      "divisions": [
+        {
+          "key": "dreamStdW",
+          "dances": [
+            "waltz"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamStdF",
+          "dances": [
+            "slowFoxtrot"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamStdT",
+          "dances": [
+            "tango"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamStdQ",
+          "dances": [
+            "quickstep"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamStdVW",
+          "dances": [
+            "vienneseWaltz"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamLatC",
+          "dances": [
+            "chaCha"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamLatR",
+          "dances": [
+            "rumba"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamLatJ",
+          "dances": [
+            "jive"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamLatS",
+          "dances": [
+            "samba"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "dreamLatP",
+          "dances": [
+            "pasoDoble"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        }
+      ]
+    },
+    {
+      "key": "proamGrowth",
+      "divisions": [
+        {
+          "key": "growthLatC",
+          "dances": [
+            "chaCha"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "growthLatR",
+          "dances": [
+            "rumba"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "growthLatJ",
+          "dances": [
+            "jive"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "growthLatP",
+          "dances": [
+            "pasoDoble"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        },
+        {
+          "key": "growthLatS",
+          "dances": [
+            "samba"
+          ],
+          "members": [
+            2,
+            2
+          ],
+          "plan": "proAm"
+        }
+      ]
+    }
+  ]
+}

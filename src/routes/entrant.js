@@ -4,6 +4,8 @@ import express from 'express';
 import * as entrants from '../services/entrants.js';
 import * as roster from '../services/athletes.js';
 import * as regs from '../services/registrations.js';
+import * as loginLinks from '../services/loginLinks.js';
+import config from '../config.js';
 import { requireEntrant } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -25,12 +27,36 @@ router.get('/entrant/signup', (req, res) => {
     title: res.locals.t('entrant.signUp'),
     error: null,
     errorParams: null,
-    form: {},
+    form: { next: loginLinks.safeNext(req.query.next) || '' },
+    mailMode: config.mail.enabled,
   });
 });
 
+// 寄信模式：註冊只要信箱，連結寄到信箱；畫面對「新註冊」和「本來就有」一模一樣。
+// Mail mode: signing up takes only an email address and the link goes to the mailbox; the screen is
+// identical for "new" and "already registered".
+async function sendLinkAndAnswer(req, res, entrant) {
+  try {
+    await loginLinks.requestLink({ entrant, t: res.locals.t, next: req.body.next });
+  } catch (err) {
+    // 寄不出去也不告訴使用者，免得從錯誤猜出帳號存不存在；只記在伺服器。
+    // A failed send is not shown either, so an error cannot reveal whether the account exists.
+    console.error('[stagerank] login link mail failed:', err.message);
+  }
+  return res.renderPage('entrant_link_sent', { title: res.locals.t('entrant.signIn') });
+}
+
 router.post('/entrant/signup', async (req, res, next) => {
   try {
+    if (config.mail.enabled) {
+      const { entrant } = await entrants.signUpByEmail({
+        email: req.body.email,
+        unitName: req.body.unitName,
+        contactName: req.body.contactName,
+        phone: req.body.phone,
+      });
+      return await sendLinkAndAnswer(req, res, entrant);
+    }
     const entrant = await entrants.signUp({
       email: req.body.email,
       password: req.body.password,
@@ -39,7 +65,7 @@ router.post('/entrant/signup', async (req, res, next) => {
       phone: req.body.phone,
     });
     res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
-    return res.redirect(303, req.body.next || '/entrant');
+    return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
   } catch (err) {
     const known = errorKeyOf(err);
     if (!known) return next(err);
@@ -49,6 +75,7 @@ router.post('/entrant/signup', async (req, res, next) => {
       error: known.key,
       errorParams: known.params,
       form: req.body,
+      mailMode: config.mail.enabled,
     });
   }
 });
@@ -59,16 +86,23 @@ router.get('/entrant/login', (req, res) => {
     title: res.locals.t('entrant.signIn'),
     error: null,
     errorParams: null,
-    form: { next: req.query.next || '' },
+    form: { next: loginLinks.safeNext(req.query.next) || '' },
+    mailMode: config.mail.enabled,
   });
 });
 
 router.post('/entrant/login', async (req, res, next) => {
   try {
+    // 寄信模式：只問信箱，永遠回同一句話；帳號存在才真的寄。
+    // Mail mode: ask only for the email, always answer with the same words; mail only if the account exists.
+    if (config.mail.enabled) {
+      const entrant = await entrants.findByEmail(req.body.email);
+      return await sendLinkAndAnswer(req, res, entrant);
+    }
     const entrant = await entrants.signIn({ email: req.body.email, password: req.body.password });
     res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
     if (entrant.must_change_password) return res.redirect(303, '/entrant/password');
-    return res.redirect(303, req.body.next || '/entrant');
+    return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
   } catch (err) {
     const known = errorKeyOf(err);
     if (!known) return next(err);
@@ -78,7 +112,48 @@ router.post('/entrant/login', async (req, res, next) => {
       error: known.key,
       errorParams: known.params,
       form: req.body,
+      mailMode: config.mail.enabled,
     });
+  }
+});
+
+// 信裡的連結：GET 只顯示「登入」按鈕，按下去（POST）才真的用掉。
+// 信箱的連結預覽機器人只會 GET，這樣它們燒不掉連結。
+// The link in the mail: GET only shows a "sign in" button and the POST is what consumes it. Mail
+// link-preview bots only GET, so they cannot burn the link.
+router.get('/entrant/link', async (req, res, next) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!(await loginLinks.isUsable(token))) {
+      res.status(400);
+      return res.renderPage('entrant_link', {
+        title: res.locals.t('entrant.signIn'), valid: false, token: '', next: '',
+      });
+    }
+    return res.renderPage('entrant_link', {
+      title: res.locals.t('entrant.signIn'),
+      valid: true,
+      token,
+      next: loginLinks.safeNext(req.query.next) || '',
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/entrant/link', async (req, res, next) => {
+  try {
+    const entrant = await loginLinks.consume(String(req.body.token || ''));
+    if (!entrant) {
+      res.status(400);
+      return res.renderPage('entrant_link', {
+        title: res.locals.t('entrant.signIn'), valid: false, token: '', next: '',
+      });
+    }
+    res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
+    return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
+  } catch (err) {
+    return next(err);
   }
 });
 

@@ -39,7 +39,8 @@ export async function truncateAll() {
              heat_entries, heats, round_entries, rounds, division_dances, dances,
              usage_reports, voucher_entries, competition_vouchers,
              registration_members, payments, registrations, athletes, entrants,
-             divisions, fee_groups, competitions
+             divisions, fee_groups, competitions,
+             login_links, app_settings, saved_templates
     RESTART IDENTITY CASCADE
   `);
 }

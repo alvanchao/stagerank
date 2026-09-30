@@ -5,6 +5,8 @@ import * as roster from '../services/athletes.js';
 import * as feeGroups from '../services/feeGroups.js';
 import * as payments from '../payments/index.js';
 import * as onlinePay from '../services/onlinePay.js';
+import config from '../config.js';
+import { readCookie, safeEqual, STAFF_COOKIE } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -12,7 +14,11 @@ router.get('/', async (req, res, next) => {
   try {
     const competitions = await comps.listCompetitions();
     const visible = competitions.filter((c) => c.status !== 'draft');
-    await res.renderPage('home', { title: res.locals.t('home.title'), competitions: visible });
+    // 登入的報名人在首頁看到自己的報名；比賽列表還是公開的，只有名稱、狀態、報名費。
+    // A signed-in entrant sees their own entries on the home page; the competition list stays
+    // public and shows only name, status and fee.
+    const entries = req.entrant ? await regs.listForEntrant(req.entrant.id) : [];
+    await res.renderPage('home', { title: res.locals.t('home.title'), competitions: visible, entries });
   } catch (err) {
     next(err);
   }
@@ -139,13 +145,28 @@ router.post('/c/:slug/register', async (req, res, next) => {
   }
 });
 
+// 報名結果頁含選手姓名與金額，所以不能靠流水號被人猜到：只有主辦，或這筆報名的所有人
+// （登入的報名人）看得到。其他人一律回一般的 404，不是 403，這樣連「這個編號存在」都確認不了。
+// The registration page carries a competitor's name and amount, so a sequential id must not be
+// enough. Only the organiser, or the signed-in entrant who owns the entry, can see it. Everyone
+// else gets the ordinary 404 (not 403), so not even the existence of an id can be confirmed.
 router.get('/r/:id', async (req, res, next) => {
   try {
-    const registration = await regs.getRegistration(Number.parseInt(req.params.id, 10));
-    if (!registration) {
+    const notFound = () => {
       res.status(404);
       return res.renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
-    }
+    };
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return notFound();
+    const registration = await regs.getRegistration(id);
+    if (!registration) return notFound();
+
+    const token = readCookie(req.headers.cookie, STAFF_COOKIE);
+    const isOrganiser = Boolean(config.adminToken && token && safeEqual(token, config.adminToken));
+    const isOwner = Boolean(req.entrant && registration.entrant_id
+      && String(registration.entrant_id) === String(req.entrant.id));
+    if (!isOrganiser && !isOwner) return notFound();
+
     const division = await comps.getDivision(registration.division_id);
     return res.renderPage('registration', {
       title: res.locals.t('register.success'),

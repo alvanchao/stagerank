@@ -34,7 +34,13 @@
     "title": "Competitions",
     "openCompetitions": "Open for registration",
     "noCompetitions": "No competitions are open for registration right now.",
-    "registerNow": "Register"
+    "registerNow": "Register",
+    "signedOutHint": "Create an entrant account and build your roster once; after that, every competition is a matter of ticking names.",
+    "signUp": "Sign up",
+    "signIn": "Sign in",
+    "myEntries": "My entries",
+    "viewEntry": "View",
+    "roster": "My roster"
   },
   "competition": {
     "status": {
@@ -420,8 +426,14 @@
       "emailInvalid": "That email address does not look right.",
       "emailTaken": "That email is already registered. Please sign in.",
       "passwordTooShort": "The password needs at least {min} characters.",
-      "badCredentials": "That email or password is wrong."
-    }
+      "badCredentials": "That email or password is wrong.",
+      "linkInvalid": "This sign-in link has already been used or has expired. Please ask for a new one."
+    },
+    "linkSentIfExists": "If this address is registered, we have sent a sign-in link.",
+    "linkSentHint": "Check your inbox. The link works for {minutes} minutes and only once. If it does not arrive, look in spam; you can ask again after a minute.",
+    "linkConfirm": "Press the button to sign in.",
+    "sendNewLink": "Send me a new sign-in link",
+    "mailLoginHint": "Enter your email and we will send you a sign-in link. No password needed."
   },
   "roster": {
     "title": "Roster",
@@ -453,10 +465,11 @@
     "firstTimeHint": "Pick a template and the divisions are generated for you; switch off the ones you are not running. Far quicker than building from an empty page.",
     "template": "Template",
     "templates": {
-      "ballroom": "Ballroom (Latin and Standard)"
+      "ballroom": "Generic ballroom (auto-combined)",
+      "ballroomTw": "Ballroom (Taiwan competition set)"
     },
     "chooseItems": "Which divisions are you running?",
-    "chooseHint": "Everything starts switched on. Untick what you are not running. Three-dance events are not offered because the combination differs by region; add them by hand afterwards.",
+    "chooseHint": "Everything starts on, or as you chose last time. Untick what you are not running; each category can also be switched on or off as a whole.",
     "allOn": "All on",
     "allOff": "All off",
     "apply": "Create these divisions",
@@ -496,7 +509,9 @@
       "alreadyEntered": "Somebody has entered, so this cannot be cleared.",
       "sameCompetition": "A competition cannot be copied onto itself.",
       "unknownTemplate": "No such template.",
-      "nothingChosen": "Leave at least one division."
+      "nothingChosen": "Leave at least one division.",
+      "templateNameRequired": "Please give this template a name.",
+      "nothingToSave": "This competition has no divisions yet, so there is nothing to save."
     },
     "dances": {
       "chaCha": "Cha Cha",
@@ -513,7 +528,82 @@
     "rowDances": "{count} dances",
     "rowAgeMax": "up to {age}",
     "rowAgeMin": "{age} and over",
-    "sourceOption": "{name} · {count} divisions"
+    "sourceOption": "{name} · {count} divisions",
+    "tw": {
+      "asiaProOpenLatin": "Asian Professional Open (Latin, 5 dances)",
+      "asiaProOpenStandard": "Asian Professional Open (Standard, 5 dances)",
+      "intlProOpenLatin": "International Professional Open (Latin, 5 dances)",
+      "intlProOpenStandard": "International Professional Open (Standard, 5 dances)",
+      "domesticProLatin": "National Professional (Latin, 5 dances)",
+      "domesticProStandard": "National Professional (Standard, 5 dances)",
+      "pro50OpenLatin": "Professional Open 50+ (Latin, 5 dances)",
+      "domesticAmLatin": "National Amateur (Latin, 5 dances)",
+      "domesticAmStandard": "National Amateur (Standard, 5 dances)",
+      "asiaAmOpenLatin": "Asian Amateur Open (Latin, 5 dances)",
+      "asiaAmOpenStandard": "Asian Amateur Open (Standard, 5 dances)",
+      "intlAmOpenLatin": "International Amateur Open (Latin, 5 dances)",
+      "intlAmOpenStandard": "International Amateur Open (Standard, 5 dances)",
+      "u10SoloLatin": "U10 Solo Open (Latin, 3 dances)",
+      "u10SoloStandard": "U10 Solo Open (Standard, 3 dances)",
+      "u12SoloLatin": "U12 Solo Open (Latin, 4 dances)",
+      "u12SoloStandard": "U12 Solo Open (Standard, 4 dances)",
+      "u15SoloLatin": "U15 Solo All-round Open (Latin, 5 dances)",
+      "u15SoloStandard": "U15 Solo All-round Open (Standard, 5 dances)",
+      "u18SoloLatin": "U18 Solo All-round Open (Latin, 5 dances)",
+      "u18SoloStandard": "U18 Solo All-round Open (Standard, 5 dances)",
+      "u15CoupleLatin": "U15 Couple Open (Latin, 4 dances)",
+      "u15CoupleStandard": "U15 Couple Open (Standard, 4 dances)",
+      "u18CoupleStandard": "U18 Couple All-round Open (Standard, 5 dances)",
+      "u21CoupleStandard": "U21 Couple All-round Open (Standard, 5 dances)",
+      "adultSoloLatin": "Adult Solo All-round Open (Latin, 5 dances)",
+      "adultSoloStandard": "Adult Solo All-round Open (Standard, 5 dances)",
+      "seniorSoloLatin": "Senior Solo Open (Latin, 3 dances)",
+      "seniorSoloStandard": "Senior Solo Open (Standard, 3 dances)",
+      "seniorLatin": "Senior Open (Latin, 4 dances)",
+      "seniorStandard": "Senior Open (Standard, 4 dances)",
+      "dreamStdW": "PRO-AM Dream Open (Standard single dance: Waltz)",
+      "dreamStdF": "PRO-AM Dream Open (Standard single dance: Foxtrot)",
+      "dreamStdT": "PRO-AM Dream Open (Standard single dance: Tango)",
+      "dreamStdQ": "PRO-AM Dream Open (Standard single dance: Quickstep)",
+      "dreamStdVW": "PRO-AM Dream Open (Standard single dance: Viennese Waltz)",
+      "dreamLatC": "PRO-AM Dream Open (Latin single dance: Cha Cha)",
+      "dreamLatR": "PRO-AM Dream Open (Latin single dance: Rumba)",
+      "dreamLatJ": "PRO-AM Dream Open (Latin single dance: Jive)",
+      "dreamLatS": "PRO-AM Dream Open (Latin single dance: Samba)",
+      "dreamLatP": "PRO-AM Dream Open (Latin single dance: Paso Doble)",
+      "growthLatC": "PRO-AM Growth Open (Latin single dance: Cha Cha)",
+      "growthLatR": "PRO-AM Growth Open (Latin single dance: Rumba)",
+      "growthLatJ": "PRO-AM Growth Open (Latin single dance: Jive)",
+      "growthLatP": "PRO-AM Growth Open (Latin single dance: Paso Doble)",
+      "growthLatS": "PRO-AM Growth Open (Latin single dance: Samba)"
+    },
+    "genres": {
+      "ballroom": "Ballroom"
+    },
+    "categories": {
+      "pro": "Professional",
+      "amateur": "Amateur",
+      "youthSolo": "Youth Solo",
+      "youthCouple": "Youth Couple",
+      "adultSolo": "Adult Solo",
+      "senior": "Senior",
+      "proamDream": "PRO-AM Dream",
+      "proamGrowth": "PRO-AM Growth",
+      "latin": "Latin",
+      "standard": "Standard",
+      "proAm": "Pro-am",
+      "uncategorised": "Uncategorised"
+    },
+    "genre": "Genre",
+    "myTemplates": "My templates",
+    "saveAsMine": "Save as my template",
+    "saveAsMineHint": "Keeps this competition's divisions, dances, ages, member limits and fee plans so another competition can start from \"My templates\" in one step. The same name overwrites the old one.",
+    "saveName": "Template name",
+    "savedAs": "Saved as template \"{name}\".",
+    "deletedTemplate": "Template deleted.",
+    "deleteSaved": "Delete",
+    "planTitle": "{name} fees",
+    "remembered": "Filled in from the last time this template was used."
   },
   "export": {
     "button": "Export Excel",
@@ -621,6 +711,12 @@
       "checkin_entry": "Check-in: called in a competitor",
       "checkin_resplit_round_dance": "Check-in: re-split heats",
       "desk_report": "Desk: reported a competitor in"
+    }
+  },
+  "mail": {
+    "loginLink": {
+      "subject": "Your {site} sign-in link",
+      "body": "Hello,\n\nUse the link below to sign in to {site} (valid for {minutes} minutes, single use):\n\n{link}\n\nIf you did not ask for this, just ignore this message."
     }
   }
 }

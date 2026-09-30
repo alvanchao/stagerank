@@ -6,6 +6,8 @@ Free, open-source competition management: online registration, payments, running
 
 MIT licensed. You owe the author nothing. There is one request, near the bottom of this page.
 
+**Community / 交流群:** questions, ideas and show-and-tell in the [StageRank Telegram group](https://t.me/+oIadPNmIKrEwZDE1). 使用問題、功能想法與經驗分享，歡迎加入 Telegram 交流群。
+
 ![The host's floor-control board](docs/shots/15-host-standby.png)
 
 ---
@@ -25,6 +27,10 @@ MIT licensed. You owe the author nothing. There is one request, near the bottom 
 - Age limits per division are two separate bounds, both optional, which is what makes the usual convention work by itself: a 13-year-old can enter U13, U15 and U18 — those set only an upper bound — and is refused by U11. Adult divisions set only a lower bound. A pro-am division leaves both blank, since the teacher's age is not the point. Limits are checked against the roster's dates of birth: anyone outside them cannot be ticked and is told why on the spot. How age is counted is the organiser's choice — the age on 31 December of the competition's year, which keeps everyone born in the same year together, or the actual age on the day — because the convention differs by country.
 - Payments through ECPay, NewebPay, PayPal or Stripe — the organiser's own keys, so the money goes straight to the organiser.
 - Building the divisions starts with one question: is this the same event you have run before? If it is, the whole setup — dances, fee plans, divisions, and each division's dance list — copies across from the earlier competition in one press, and only the date is new. Entries and results stay behind where they belong.
+- The home page starts with an account strip: **Sign up** and **Sign in** for a visitor, and **My entries** for a signed-in entrant — every entry across every competition, with its status, amount and a link to the entry page. The competition list underneath stays public and shows only name, status and fee.
+- An entry page (`/r/<id>`) carries a competitor's name and the amount, so a sequential id is not enough to open it: only the organiser and the signed-in entrant who owns the entry can. Everyone else gets the ordinary 404 (not 403), so even the existence of an id cannot be confirmed.
+- **Template library, three levels.** The setup page picks a *genre* (first one: ballroom), then a *template*, then shows its divisions grouped by *category*, each category with its own select-all / select-none, plus a global all/none and a running count. A row says how many dances, the age limits and whether it is solo, couple or team. The curated `ballroom-tw` template carries 46 divisions (professional, amateur, youth solo and couple, adult solo, senior, and the two pro-am series) with the dances already attached and two fee plans (general 1800 covering 2 then 600; pro-am 2500 covering 1 then 1200) prefilled. The older generated template stays selectable as "Generic ballroom (auto-combined)".
+- **Remembers the last choice.** Applying a template stores its fee plans and ticked divisions; the next time that template is opened they come back prefilled, falling back to the template's own defaults. Once a competition has divisions, "Save as my template" keeps them — literal names, dances, ages, member limits, fee plans, category — under a name of your own; they appear in the picker under "My templates" and apply through exactly the same path. Saving under an existing name overwrites it.
 - A first-time organiser starts from the built-in ballroom template instead. It generates the divisions already wired to their dances, with everything switched on, and the organiser switches off what they are not running. Removing from a list is far less work than ticking items out of an empty grid, and it also shows them what they could be running. Three-dance events are deliberately not offered, because which three dances they are differs by region, and guessing wrong is worse than leaving it out. Dance names follow the interface language, so a Chinese running order says 恰恰 rather than Cha Cha.
 - Nothing is final until somebody enters: while the entry list is empty the whole setup can be cleared and rebuilt. Once the first entry arrives it locks, because moving divisions at that point makes the roster stop adding up.
 - Closing registration issues a **competition voucher code**. Everything after that point requires it.
@@ -102,6 +108,8 @@ Everything is environment variables — see [`.env.example`](.env.example). Two 
 - `SITE_NAME` — your competition's name, shown in the header.
 - Your own payment keys. **Keys are read from the environment only.** They are never written to the database and never appear in the source.
 
+Optional: `SMTP_URL` and `MAIL_FROM` (emailed sign-in links, see above), `MAIL_MODE=memory` (development), `TEMPLATE_DIR` (your own templates, see "Adding a template or genre").
+
 A payment provider stays hidden on the registration form until it is both enabled and fully keyed.
 
 ### How each provider completes a payment
@@ -118,7 +126,7 @@ A payment provider stays hidden on the registration form until it is both enable
 | Registration desk | `/desk` | a personal single-use code (organiser page → Staff) |
 | Marshal (check-in) | `/checkin` | a personal single-use code (organiser page → Staff) |
 | Host | `/host` | a personal single-use code (organiser page → Staff) |
-| Entrant (studio or parent) | `/entrant` | their own email and password |
+| Entrant (studio or parent) | `/entrant` | their own email and password, or an emailed link when mail is configured |
 | Judge | `/judge` | their own login code |
 | Competitors and public | `/results` | none |
 
@@ -126,7 +134,34 @@ Staff sign in through the staff app at `/staff/app`: the organiser creates a bat
 
 A judge's login code is generated by the organiser and can be handed out on the day, so a stand-in judge needs no account set up in advance.
 
-A forgotten entrant password is handled face to face: the organiser issues a temporary one from `/admin/entrants`, and the entrant must choose their own at the next sign-in. There is deliberately no "email me a reset link", because a self-hosted site may have no mail service at all, and a competition that cannot send mail should still be able to take entries.
+**Email sign-in links (optional).** Set `SMTP_URL` and `MAIL_FROM` and the entrant screens become passwordless: signing up asks for an email address (and an optional unit, contact and phone), signing in asks for the address only, and a link is mailed. The link opens a page with a *Sign in* button and only pressing it (a POST) uses the link, so mail-preview bots that merely fetch the URL cannot burn it. A link works once and for 15 minutes; only its sha256 is stored. The login page answers "if this address is registered, we have sent a sign-in link" whether or not the address exists, sends at most one mail per address per 60 seconds, and signing up an address that already exists looks identical and changes nothing. The mail is in the language of the request. With no mail configured nothing changes: email and password, and the organiser's temporary-password reset below. `MAIL_MODE=memory` keeps mail in an in-memory outbox (`src/services/mailer.js` exports `outbox`) for development and tests; nothing is sent. `NODE_ENV=test` alone does not switch mail on.
+
+In password mode, a forgotten entrant password is handled face to face: the organiser issues a temporary one from `/admin/entrants`, and the entrant must choose their own at the next sign-in. There is deliberately no "email me a reset link", because a self-hosted site may have no mail service at all, and a competition that cannot send mail should still be able to take entries.
+
+## Adding a template or genre
+
+The template library is data. The built-in catalogue lives in `src/templates/*.json`; to add your own without touching code, put JSON files in a folder and set `TEMPLATE_DIR=/path/to/folder` (they are read at start-up, next to the built-in ones; a file cannot replace a built-in `key`, and a broken file is skipped with a warning). A file looks like this:
+
+```json
+{
+  "key": "my-genre-2027",
+  "genre": "my-genre",
+  "genreLabel": { "zh-TW": "我的類型", "en": "My genre" },
+  "label": { "zh-TW": "我的範本", "en": "My template" },
+  "dances": [ { "key": "floor", "style": "x" }, { "key": "vault", "style": "x" } ],
+  "danceNames": { "floor": { "zh-TW": "自由體操", "en": "Floor" }, "vault": { "zh-TW": "跳馬", "en": "Vault" } },
+  "danceSets": { "both": ["floor", "vault"] },
+  "plans": { "general": { "base": 1800, "includes": 2, "extra": 600 } },
+  "categories": [
+    { "key": "kids", "label": { "zh-TW": "兒童", "en": "Kids" }, "divisions": [
+      { "key": "k1", "name": { "zh-TW": "兒童全能", "en": "Kids all-round" },
+        "set": "both", "members": [1, 1], "ageMax": 10, "plan": "general" }
+    ] }
+  ]
+}
+```
+
+`dances` fixes the order dances are created in. A division lists `dances` directly or names a `set` from `danceSets`; `members` is `[min, max]` (default `[2, 2]`); `ageMin` / `ageMax` are optional; `plan` names an entry of `plans` (default: the first). Anywhere a label is expected you may write a plain string, a `{ locale: text }` object, or leave it out and add locale keys instead (`setup.genres.<genre>`, `setup.categories.<category>`, `setup.dances.<dance>`, `setup.plans.<plan>`, and `setup.<key>.<division>` or `nameKeyPrefix` for division names — this is how `ballroom-tw` does it).
 
 ## Adding your language
 

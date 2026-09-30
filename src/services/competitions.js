@@ -100,17 +100,18 @@ export function addDivision({
   ageMin = null,
   ageMax = null,
   feeGroupId = null,
+  category = null,
 }) {
   const min = Math.max(1, Number.parseInt(memberMin, 10) || 1);
   const max = Math.min(24, Math.max(min, Number.parseInt(memberMax ?? min, 10) || min));
   return one(
     `INSERT INTO divisions
        (competition_id, name, fee_cents, sort_order, member_min, member_max, fee_mode,
-        extra_division_fee_cents, age_min, age_max, fee_group_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        extra_division_fee_cents, age_min, age_max, fee_group_id, category)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
     [competitionId, name, feeCents, sortOrder, min, max, normaliseFeeMode(feeMode),
      Number.parseInt(extraDivisionFeeCents, 10) || 0, ageBound(ageMin), ageBound(ageMax),
-     idOrNull(feeGroupId)],
+     idOrNull(feeGroupId), category ? String(category).slice(0, 80) : null],
   );
 }
 
