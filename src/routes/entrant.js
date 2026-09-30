@@ -1,5 +1,6 @@
 // 報名人自己的畫面：註冊、登入、名冊、報名紀錄。
 // The entrant's own screens: sign up, sign in, the roster, and what they have entered.
+import { clearSessions } from '../middleware/identity.js';
 import express from 'express';
 import * as entrants from '../services/entrants.js';
 import * as roster from '../services/athletes.js';
@@ -65,6 +66,7 @@ router.post('/entrant/signup', async (req, res, next) => {
       phone: req.body.phone,
     });
     res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
+    clearSessions(res, 'entrant');
     return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
   } catch (err) {
     const known = errorKeyOf(err);
@@ -101,6 +103,7 @@ router.post('/entrant/login', async (req, res, next) => {
     }
     const entrant = await entrants.signIn({ email: req.body.email, password: req.body.password });
     res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
+    clearSessions(res, 'entrant');
     if (entrant.must_change_password) return res.redirect(303, '/entrant/password');
     return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
   } catch (err) {
@@ -151,6 +154,7 @@ router.post('/entrant/link', async (req, res, next) => {
       });
     }
     res.cookie(entrants.ENTRANT_COOKIE, entrants.makeToken(entrant.id), COOKIE_OPTIONS);
+    clearSessions(res, 'entrant');
     return res.redirect(303, loginLinks.safeNext(req.body.next) || '/entrant');
   } catch (err) {
     return next(err);

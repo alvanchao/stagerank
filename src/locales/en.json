@@ -28,7 +28,12 @@
   "nav": {
     "home": "Home",
     "admin": "Organiser",
-    "entrant": "Entrants"
+    "entrant": "Entrants",
+    "myEntries": "My entries",
+    "myScreen": "My screen",
+    "logout": "Sign out",
+    "roleAdmin": "Organiser",
+    "roleJudge": "Judge"
   },
   "home": {
     "title": "Competitions",

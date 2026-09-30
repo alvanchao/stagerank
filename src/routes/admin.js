@@ -10,6 +10,7 @@ import * as staffCodes from '../services/staffCodes.js';
 import QRCode from 'qrcode';
 import * as setup from '../services/setup.js';
 import { providerStatus } from '../payments/index.js';
+import { clearSessions } from '../middleware/identity.js';
 import { requireStaff as requireAdmin, safeEqual, STAFF_COOKIE as COOKIE } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -28,10 +29,11 @@ router.post('/login', (req, res) => {
       error: 'admin.tokenInvalid',
     });
   }
-  res.setHeader(
+  res.append(
     'Set-Cookie',
     `${COOKIE}=${encodeURIComponent(config.adminToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200`,
   );
+  clearSessions(res, 'admin');
   return res.redirect(303, '/admin');
 });
 

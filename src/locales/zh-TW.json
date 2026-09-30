@@ -28,7 +28,12 @@
   "nav": {
     "home": "首頁",
     "admin": "主辦後台",
-    "entrant": "報名專區"
+    "entrant": "報名專區",
+    "myEntries": "我的報名",
+    "myScreen": "我的工作畫面",
+    "logout": "登出",
+    "roleAdmin": "主辦",
+    "roleJudge": "評審"
   },
   "home": {
     "title": "比賽列表",

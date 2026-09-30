@@ -78,14 +78,22 @@
 </style>
 </head>
 <body data-stagerank="0.1.0">
+<% var identity = (typeof identity !== 'undefined') ? identity : null; %>
 <header class="site">
   <div class="wrap">
     <a class="brand" href="/"><%= config.siteName %></a>
     <span class="tagline"><%= t('common.siteTagline') %></span>
     <nav>
       <a href="/"><%= t('nav.home') %></a>
-      <a href="/entrant"><%= t('nav.entrant') %></a>
-      <a href="/admin"><%= t('nav.admin') %></a>
+      <% if (!identity) { %>
+        <a href="/entrant"><%= t('nav.entrant') %></a>
+      <% } else if (identity.kind === 'admin') { %>
+        <a href="/admin"><%= t('nav.admin') %></a>
+      <% } else if (identity.kind === 'entrant') { %>
+        <a href="/entrant"><%= t('nav.myEntries') %></a>
+      <% } else { %>
+        <a href="<%= identity.home %>"><%= t('nav.myScreen') %></a>
+      <% } %>
       <form method="get" style="display:inline">
         <select name="lang" onchange="this.form.submit()" aria-label="<%= t('common.language') %>">
           <% locales.forEach(function (l) { %>
@@ -93,6 +101,14 @@
           <% }); %>
         </select>
       </form>
+      <% if (identity) { %>
+        <form method="post" action="/logout" style="display:inline;margin:0">
+          <span class="small muted"><%= identity.kind === 'admin' ? t('nav.roleAdmin')
+            : (identity.kind === 'staff' ? t('staffApp.role_' + identity.role) + '：' + identity.name
+            : (identity.kind === 'judge' ? t('nav.roleJudge') + '：' + identity.name : identity.name)) %></span>
+          <button type="submit" class="ghost small" style="padding:4px 10px"><%= t('nav.logout') %></button>
+        </form>
+      <% } %>
     </nav>
   </div>
 </header>

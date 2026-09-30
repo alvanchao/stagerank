@@ -102,7 +102,7 @@ test('首頁：沒登入是註冊與登入，登入後是我的報名 / home: si
   assert.match(signedIn, /Division Alpha/);
   assert.match(signedIn, new RegExp(`href="/r/${one.registration.id}"`));
   assert.match(signedIn, /href="\/entrant"/, 'link to the roster');
-  assert.match(signedIn, /action="\/entrant\/logout"/, 'and to sign out');
+  assert.match(signedIn, /action="\/logout"/, 'and the one sign-out button');
   assert.ok(!signedIn.includes('Someone Else'), 'only my own entries');
   assert.ok(!signedIn.includes('href="/entrant/signup"'));
 

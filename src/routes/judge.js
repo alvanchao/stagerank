@@ -7,6 +7,7 @@ import * as judgeService from '../services/judges.js';
 import * as floor from '../services/floor.js';
 import * as scoring from '../services/scoring.js';
 import * as schedule from '../services/schedule.js';
+import { clearSessions } from '../middleware/identity.js';
 import { JUDGE_COOKIE, readCookie } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -34,10 +35,11 @@ router.post('/judge/login', async (req, res, next) => {
       res.status(401);
       return res.renderPage('judge_login', { title: res.locals.t('judges.title'), error: 'judges.loginInvalid' });
     }
-    res.setHeader(
+    res.append(
       'Set-Cookie',
       `${JUDGE_COOKIE}=${encodeURIComponent(judge.login_code)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
     );
+    clearSessions(res, 'judge');
     return res.redirect(303, `/judge/${judge.competition_id}`);
   } catch (err) {
     next(err);

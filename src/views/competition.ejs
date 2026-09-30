@@ -3,8 +3,6 @@
   <span class="pill <%= competition.status === 'open' ? 'ok' : '' %>"><%= t('competition.status.' + competition.status) %></span>
   <%# 用收費方案的比賽，比賽層級的報名費是 0，但不等於免費。 %>
   <%# A competition on a fee plan has a zero competition-level fee, which does not mean free. %>
-  <% if (competition.fee_cents > 0) { %> · <%= t('competition.fee') %>: <%= money(competition.fee_cents, competition.currency) %>
-  <% } else if (!needsPayment) { %> · <%= t('common.free') %><% } %>
   <% if (competition.event_date) { %> · <%= t('competition.eventDate') %>: <%= ymd(competition.event_date) %><% } %>
 </p>
 

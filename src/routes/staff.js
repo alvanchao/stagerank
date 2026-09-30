@@ -11,6 +11,7 @@ import * as scoring from '../services/scoring.js';
 import * as judgeService from '../services/judges.js';
 import * as roundDecisions from '../services/roundDecisions.js';
 import { sseHandler } from '../services/realtime.js';
+import { clearSessions } from '../middleware/identity.js';
 import { requireRole, readCookie, STAFF_SESSION_COOKIE } from '../middleware/auth.js';
 import * as staffCodes from '../services/staffCodes.js';
 
@@ -49,10 +50,11 @@ router.post('/staff/login', async (req, res, next) => {
   const code = staffCodes.extractCode(req.body.code);
   try {
     const { member, cookieValue } = await staffCodes.redeem(code, { standalone: req.body.standalone === '1' });
-    res.setHeader(
+    res.append(
       'Set-Cookie',
       `${STAFF_SESSION_COOKIE}=${encodeURIComponent(cookieValue)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${staffCodes.SESSION_MAX_AGE_SECONDS}`,
     );
+    clearSessions(res, 'staff');
     return res.redirect(303, homeFor(member));
   } catch (err) {
     if (err instanceof staffCodes.StaffError) // 只是還沒安裝成 App 時碼沒被用掉，保留在輸入欄，安裝後不用重打。

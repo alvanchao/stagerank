@@ -6,6 +6,7 @@ import config from './config.js';
 import localeMiddleware from './middleware/locale.js';
 import { entryKind } from './services/entryUnits.js';
 import { attachEntrant } from './middleware/auth.js';
+import { attachIdentity, clearSessions } from './middleware/identity.js';
 import publicRoutes from './routes/public.js';
 import entrantRoutes from './routes/entrant.js';
 import adminRoutes from './routes/admin.js';
@@ -76,6 +77,14 @@ export function createApp() {
     next();
   });
   app.use(attachEntrant);
+  app.use(attachIdentity);
+
+  // 統一登出：一次清掉這台瀏覽器所有身分。
+  // One sign-out for every role: clears every identity in this browser.
+  app.post('/logout', (req, res) => {
+    clearSessions(res);
+    res.redirect(303, '/');
+  });
 
   // 靜態檔案只有這兩支小腳本，其他全部內嵌。
   // The only static files are these two small scripts; everything else is inline.

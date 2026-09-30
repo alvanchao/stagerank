@@ -36,10 +36,7 @@
         <% }); %>
       </table>
     <% } %>
-    <form method="post" action="/entrant/logout" style="margin-top:12px">
-      <a class="btn ghost" href="/entrant"><%= t('home.roster') %></a>
-      <button type="submit" class="ghost"><%= t('entrant.signOut') %></button>
-    </form>
+    <p style="margin-top:12px"><a class="btn ghost" href="/entrant"><%= t('home.roster') %></a></p>
   </div>
 <% } %>
 
@@ -54,7 +51,6 @@
     <h2 style="margin-top:0"><%= c.name %></h2>
     <p class="small muted">
       <span class="pill <%= c.status === 'open' ? 'ok' : '' %>"><%= t('competition.status.' + c.status) %></span>
-      <% if (c.fee_cents > 0) { %> · <%= t('competition.fee') %>: <%= money(c.fee_cents, c.currency) %><% } else { %> · <%= t('common.free') %><% } %>
       <% if (c.closes_at) { %> · <%= t('competition.closesAt') %>: <%= when(c.closes_at) %><% } %>
     </p>
     <% if (c.status === 'open') { %>
