@@ -30,6 +30,14 @@
             <label for="e<%= a.id %>"><%= t('roster.email') %></label>
             <input id="e<%= a.id %>" type="email" name="email" value="<%= a.email || '' %>" maxlength="180">
           </div>
+          <div class="field">
+            <label for="r<%= a.id %>"><%= t('roster.region') %></label>
+            <input id="r<%= a.id %>" type="text" name="region" value="<%= a.region || '' %>" maxlength="60">
+          </div>
+          <div class="field grow">
+            <label for="u<%= a.id %>"><%= t('roster.unit') %></label>
+            <input id="u<%= a.id %>" type="text" name="athleteUnit" value="<%= a.unit_name || '' %>" maxlength="120">
+          </div>
           <div class="field"><button type="submit" class="ghost small"><%= t('common.save') %></button></div>
         </div>
       </form>
@@ -38,7 +46,7 @@
         <div class="division-form">
           <div class="field grow">
             <strong><%= a.name %></strong>
-            <span class="small muted"><%= ymd(a.birth_date) %><% if (a.email) { %> · <%= a.email %><% } %></span>
+            <span class="small muted"><%= ymd(a.birth_date) %><% if (a.email) { %> · <%= a.email %><% } %><% if (a.region) { %> · <%= a.region %><% } %><% if (a.unit_name) { %> · <%= a.unit_name %><% } %></span>
           </div>
           <div class="field">
             <a class="btn ghost small" href="/entrant?edit=<%= a.id %>"><%= t('common.edit') %></a>
@@ -67,6 +75,14 @@
       <div class="field grow">
         <label for="newEmail"><%= t('roster.email') %></label>
         <input id="newEmail" type="email" name="email" maxlength="180">
+      </div>
+      <div class="field">
+        <label for="newRegion"><%= t('roster.region') %></label>
+        <input id="newRegion" type="text" name="region" maxlength="60">
+      </div>
+      <div class="field grow">
+        <label for="newUnit"><%= t('roster.unit') %></label>
+        <input id="newUnit" type="text" name="athleteUnit" maxlength="120">
       </div>
       <div class="field"><button type="submit"><%= t('roster.add') %></button></div>
     </div>

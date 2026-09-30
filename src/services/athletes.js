@@ -55,7 +55,7 @@ export function referenceDateFor(competition) {
   return competition?.event_date ? toDate(competition.event_date) : new Date();
 }
 
-export async function addAthlete({ entrantId, name, birthDate, email = null, note = null }) {
+export async function addAthlete({ entrantId, name, birthDate, email = null, note = null, region = null, unitName = null }) {
   const label = String(name || '').trim();
   if (!label) throw new AthleteError('roster.errors.nameRequired');
   const born = parseBirthDate(birthDate);
@@ -69,21 +69,23 @@ export async function addAthlete({ entrantId, name, birthDate, email = null, not
   if (clash) throw new AthleteError('roster.errors.duplicate', { name: label });
 
   return one(
-    `INSERT INTO athletes (entrant_id, name, birth_date, email, note)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [entrantId, label, born, String(email || '').trim() || null, note || null],
+    `INSERT INTO athletes (entrant_id, name, birth_date, email, note, region, unit_name)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [entrantId, label, born, String(email || '').trim() || null, note || null,
+     String(region || '').trim() || null, String(unitName || '').trim() || null],
   );
 }
 
-export async function updateAthlete(id, entrantId, { name, birthDate, email, note }) {
+export async function updateAthlete(id, entrantId, { name, birthDate, email, note, region, unitName }) {
   const existing = await one('SELECT * FROM athletes WHERE id = $1 AND entrant_id = $2', [id, entrantId]);
   if (!existing) throw new AthleteError('errors.notFound');
   const label = String(name || '').trim();
   if (!label) throw new AthleteError('roster.errors.nameRequired');
   return one(
-    `UPDATE athletes SET name = $3, birth_date = $4, email = $5, note = $6, updated_at = now()
+    `UPDATE athletes SET name = $3, birth_date = $4, email = $5, note = $6, region = $7, unit_name = $8, updated_at = now()
      WHERE id = $1 AND entrant_id = $2 RETURNING *`,
-    [id, entrantId, label, parseBirthDate(birthDate), String(email || '').trim() || null, note || null],
+    [id, entrantId, label, parseBirthDate(birthDate), String(email || '').trim() || null, note || null,
+     String(region || '').trim() || null, String(unitName || '').trim() || null],
   );
 }
 

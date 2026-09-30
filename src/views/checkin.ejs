@@ -32,7 +32,7 @@
                 <input type="hidden" name="undo" value="1">
                 <button type="submit" class="ghost small"><span class="pill ok"><%= t('floor.checkedIn') %></span></button>
               <% } else { %>
-                <button type="submit" class="small"><%= t('floor.checkedIn') %></button>
+                <button type="submit" class="small"><%= t('floor.checkInAction') %></button>
               <% } %>
             </form>
           </td>
@@ -42,5 +42,4 @@
   </div>
 <% }); %>
 
-<p class="small muted"><%= t('floor.notReported') %>：<%= t('admin.markPaidHint') %></p>
 <script src="/live.js" data-competition="<%= competition.id %>"></script>

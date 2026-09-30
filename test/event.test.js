@@ -243,3 +243,40 @@ test('1 到 7：準決賽 mark → 決賽排名次 → 成績公告，選手用�
   const lookup = await (await http.get(`/results/${ev.competition.slug}/bib?bib=${winner.bib}`)).text();
   assert.ok(lookup.includes(winner.name), 'a competitor finds their own result by bib');
 });
+
+test('Excel 匯出：背號表與賽序表能開、內容與畫面一致、只有主辦能下載 / xlsx export matches the screens and is organiser-only', async () => {
+  const ev = await buildEvent();
+  const ExcelJS = (await import('exceljs')).default;
+  const cookie = { headers: { cookie: `stagerank_admin=${encodeURIComponent('test-admin-token')}` } };
+
+  const bibsRes = await http.get(`/admin/c/${ev.competition.id}/export/bibs.xlsx`, cookie);
+  assert.equal(bibsRes.status, 200);
+  assert.match(bibsRes.headers.get('content-type'), /spreadsheetml/);
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(Buffer.from(await bibsRes.arrayBuffer()));
+  const sheet = wb.worksheets[0];
+  assert.equal(sheet.rowCount, 1 + 18, 'a header plus 18 entries');
+  assert.equal(sheet.getRow(1).getCell(1).value, '背號');
+  const bibs = [];
+  sheet.eachRow((row, i) => { if (i > 1) bibs.push(row.getCell(1).value); });
+  assert.equal(new Set(bibs).size, 14, '14 people, 14 different bibs');
+
+  const orderRes = await http.get(`/admin/c/${ev.competition.id}/export/order.xlsx`, cookie);
+  const wb2 = new ExcelJS.Workbook();
+  await wb2.xlsx.load(Buffer.from(await orderRes.arrayBuffer()));
+  assert.equal(wb2.worksheets[0].rowCount, 1 + 5, 'five heats in the running order');
+  assert.equal(wb2.worksheets[1].rowCount, 1 + 7 + 7 + 7 + 7 + 4, 'every dancer of every heat is listed');
+
+  // 英文介面就是英文標題
+  const en = await http.get(`/admin/c/${ev.competition.id}/export/bibs.xlsx?lang=en`, cookie);
+  const wb3 = new ExcelJS.Workbook();
+  await wb3.xlsx.load(Buffer.from(await en.arrayBuffer()));
+  assert.equal(wb3.worksheets[0].getRow(1).getCell(1).value, 'Bib');
+
+  // 沒有主辦通行碼下載不到
+  const denied = await http.get(`/admin/c/${ev.competition.id}/export/bibs.xlsx`);
+  assert.notEqual(denied.headers.get('content-type') || '', XLSX_TYPE_CHECK);
+  const judge = await http.get(`/admin/c/${ev.competition.id}/export/order.xlsx`, { headers: { cookie: 'stagerank_host_1=whatever' } });
+  assert.doesNotMatch(judge.headers.get('content-type') || '', /spreadsheetml/);
+});
+const XLSX_TYPE_CHECK = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';

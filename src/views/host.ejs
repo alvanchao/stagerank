@@ -70,26 +70,29 @@
       <% current.entries.forEach(function (e) { %>
         <tr>
           <td style="width:56px"><strong><%= e.bib_number || '—' %></strong></td>
-          <td><%= e.athlete_name %><div class="small muted"><%= e.division_name %></div></td>
           <td>
-            <% if (e.entry_status === 'absent') { %>
-              <span class="pill bad"><%= t('floor.absent') %></span>
-            <% } else if (e.checked_in_at) { %>
-              <span class="pill ok"><%= t('floor.checkedIn') %></span>
-            <% } else { %>
-              <span class="pill warn"><%= t('floor.notCheckedIn') %></span>
-            <% } %>
-          </td>
-          <td style="width:150px">
-            <% if (!e.checked_in_at && e.entry_status !== 'absent') { %>
-              <form method="post" action="/host/<%= competition.id %>/add/<%= e.heat_entry_id %>" style="display:inline">
-                <button type="submit" class="small"><%= t('floor.addLate') %></button>
+            <%= e.athlete_name %>
+            <div class="small muted"><%= e.division_name %></div>
+            <div style="margin-top:6px">
+              <% if (e.entry_status === 'absent') { %>
+                <span class="pill bad"><%= t('floor.absent') %></span>
+              <% } else if (e.checked_in_at) { %>
+                <span class="pill ok"><%= t('floor.checkedIn') %></span>
+              <% } else { %>
+                <span class="pill warn"><%= t('floor.notCheckedIn') %></span>
+              <% } %>
+            </div>
+            <div style="margin-top:6px">
+              <% if (!e.checked_in_at && e.entry_status !== 'absent') { %>
+                <form method="post" action="/host/<%= competition.id %>/add/<%= e.heat_entry_id %>" style="display:inline">
+                  <button type="submit" class="small"><%= t('floor.addLate') %></button>
+                </form>
+              <% } %>
+              <form method="post" action="/host/<%= competition.id %>/absent/<%= e.round_entry_id %>" style="display:inline">
+                <% if (e.entry_status === 'absent') { %><input type="hidden" name="undo" value="1"><% } %>
+                <button type="submit" class="ghost small"><%= e.entry_status === 'absent' ? t('floor.undoAbsent') : t('floor.markAbsent') %></button>
               </form>
-            <% } %>
-            <form method="post" action="/host/<%= competition.id %>/absent/<%= e.round_entry_id %>" style="display:inline">
-              <% if (e.entry_status === 'absent') { %><input type="hidden" name="undo" value="1"><% } %>
-              <button type="submit" class="ghost small"><%= e.entry_status === 'absent' ? t('floor.undoAbsent') : t('floor.markAbsent') %></button>
-            </form>
+            </div>
           </td>
         </tr>
       <% }); %>

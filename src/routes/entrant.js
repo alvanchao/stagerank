@@ -146,6 +146,8 @@ router.post('/entrant/roster', requireEntrant, async (req, res, next) => {
       birthDate: req.body.birthDate,
       email: req.body.email,
       note: req.body.note,
+      region: req.body.region,
+      unitName: req.body.athleteUnit,
     });
     return res.redirect(303, '/entrant#add');
   } catch (err) {
@@ -163,6 +165,8 @@ router.post('/entrant/roster/:id', requireEntrant, async (req, res, next) => {
       birthDate: req.body.birthDate,
       email: req.body.email,
       note: req.body.note,
+      region: req.body.region,
+      unitName: req.body.athleteUnit,
     });
     return res.redirect(303, '/entrant');
   } catch (err) {

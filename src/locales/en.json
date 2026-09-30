@@ -328,7 +328,8 @@
     "errors": {
       "heatClosed": "This heat has finished, so nobody can be added.",
       "heatStarted": "This heat has started, so check-in cannot be undone."
-    }
+    },
+    "checkInAction": "Check in"
   },
   "results": {
     "title": "Results",
@@ -432,7 +433,9 @@
       "birthDateInvalid": "That date of birth does not look right.",
       "birthDateFuture": "A date of birth cannot be in the future.",
       "duplicate": "The roster already has a \"{name}\" with that same birthday."
-    }
+    },
+    "region": "Region (optional)",
+    "unit": "Unit (optional; defaults to the account unit)"
   },
   "setup": {
     "title": "Build the divisions",
@@ -519,5 +522,47 @@
     "regenerate": "Regenerate",
     "shownOnce": "New passcode (shown once)",
     "desk": "Registration desk"
+  },
+  "export": {
+    "button": "Export Excel",
+    "bibsButton": "Export bib list",
+    "orderButton": "Export running order",
+    "bibsSheet": "Bibs",
+    "orderSheet": "Running order",
+    "detailSheet": "Heat lists",
+    "bib": "Bib",
+    "name": "Name",
+    "unit": "Unit",
+    "division": "Division",
+    "order": "Order",
+    "heat": "Heat",
+    "dance": "Dance",
+    "count": "Dancers",
+    "bibs": "Bibs",
+    "noVoucher": "Issue the voucher and assign bibs first.",
+    "listsButton": "Export lists (4 kinds + reconciliation)",
+    "region": "Region",
+    "no": "No.",
+    "countUnits": "Entries",
+    "countDivisions": "Divisions entered",
+    "division_n": "Division {n}",
+    "sheetBibs": "Bibs",
+    "sheetByDivision1": "By division 1",
+    "sheetByDivision2": "By division 2",
+    "sheetByPerson1": "By person 1",
+    "sheetByPerson2": "By person 2",
+    "sheetRecon": "Reconciliation",
+    "sheetIssues": "Checks",
+    "orderNo": "Order no.",
+    "payStatus": "Payment status",
+    "amount": "Amount",
+    "duplicate": "Duplicate",
+    "yes": "Duplicate",
+    "orders": "Orders",
+    "orderList": "Order numbers",
+    "status_paid": "Paid",
+    "status_pending": "Unpaid",
+    "status_cancelled": "Cancelled",
+    "status_refunded": "Refunded"
   }
 }

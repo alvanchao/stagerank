@@ -328,7 +328,8 @@
     "errors": {
       "heatClosed": "這一場已經結束，不能再補點。",
       "heatStarted": "這一場已經開始，不能取消檢錄。"
-    }
+    },
+    "checkInAction": "點錄"
   },
   "results": {
     "title": "成績",
@@ -432,7 +433,9 @@
       "birthDateInvalid": "生日格式不對。",
       "birthDateFuture": "生日不能是未來的日期。",
       "duplicate": "名冊裡已經有一位「{name}」，生日也一樣。"
-    }
+    },
+    "region": "地區（縣市，選填）",
+    "unit": "單位（選填，沒填就用報名帳號的單位）"
   },
   "setup": {
     "title": "快速建立項目",
@@ -519,5 +522,47 @@
     "regenerate": "重新產生",
     "shownOnce": "新密碼（只顯示這一次）",
     "desk": "報到"
+  },
+  "export": {
+    "button": "匯出 Excel",
+    "bibsButton": "匯出背號表",
+    "orderButton": "匯出賽序",
+    "bibsSheet": "背號表",
+    "orderSheet": "賽序",
+    "detailSheet": "每批名單",
+    "bib": "背號",
+    "name": "姓名",
+    "unit": "單位",
+    "division": "組別",
+    "order": "順序",
+    "heat": "批次",
+    "dance": "舞種",
+    "count": "人數",
+    "bibs": "背號名單",
+    "noVoucher": "請先產生憑證碼並編好背號。",
+    "listsButton": "匯出名單（四種＋對帳）",
+    "region": "地區",
+    "no": "編號",
+    "countUnits": "隊數",
+    "countDivisions": "報名組別數",
+    "division_n": "組別 {n}",
+    "sheetBibs": "背號",
+    "sheetByDivision1": "依組別1",
+    "sheetByDivision2": "依組別2",
+    "sheetByPerson1": "依選手1",
+    "sheetByPerson2": "依選手2",
+    "sheetRecon": "對帳用",
+    "sheetIssues": "異常檢查",
+    "orderNo": "訂單編號",
+    "payStatus": "付款狀態",
+    "amount": "金額",
+    "duplicate": "是否重複",
+    "yes": "重複",
+    "orders": "訂單數",
+    "orderList": "訂單編號清單",
+    "status_paid": "付款成功",
+    "status_pending": "未付款",
+    "status_cancelled": "已取消",
+    "status_refunded": "已退款"
   }
 }

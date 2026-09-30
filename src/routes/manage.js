@@ -7,6 +7,7 @@ import * as schedule from '../services/schedule.js';
 import * as judgeService from '../services/judges.js';
 import * as scoring from '../services/scoring.js';
 import * as voucherService from '../services/voucher.js';
+import * as xlsx from '../services/exportXlsx.js';
 import { requireStaff } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -15,6 +16,58 @@ function backToSchedule(res, competitionId, error) {
   const suffix = error ? `?error=${encodeURIComponent(error)}` : '';
   return res.redirect(303, `/admin/c/${competitionId}/schedule${suffix}`);
 }
+
+// 檔名可能含中文，所以同時給一個純英數的備用名稱與 UTF-8 名稱。
+// The name may hold non-ASCII, so give an ASCII fallback plus the UTF-8 one.
+function attachment(slug, kind) {
+  const ascii = String(slug).replace(/[^A-Za-z0-9_-]+/g, '') || 'stagerank';
+  return `attachment; filename="${ascii}-${kind}.xlsx"; filename*=UTF-8''${encodeURIComponent(`${slug}-${kind}.xlsx`)}`;
+}
+
+// Excel 匯出：只有主辦能下載。
+// Excel export, organiser only.
+router.get('/c/:id/export/bibs.xlsx', requireStaff, async (req, res, next) => {
+  try {
+    const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
+    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    const voucher = await voucherService.activeVoucher(competition.id);
+    if (!voucher) return backToSchedule(res, competition.id, 'export.noVoucher');
+    const buffer = await xlsx.bibsWorkbook({ voucherCode: voucher.code, t: res.locals.t });
+    res.setHeader('Content-Type', xlsx.XLSX_TYPE);
+    res.setHeader('Content-Disposition', attachment(competition.slug, 'bibs'));
+    return res.send(buffer);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/c/:id/export/lists.xlsx', requireStaff, async (req, res, next) => {
+  try {
+    const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
+    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    const voucher = await voucherService.activeVoucher(competition.id);
+    if (!voucher) return backToSchedule(res, competition.id, 'export.noVoucher');
+    const buffer = await xlsx.listsWorkbook({ competitionId: competition.id, t: res.locals.t });
+    res.setHeader('Content-Type', xlsx.XLSX_TYPE);
+    res.setHeader('Content-Disposition', attachment(competition.slug, 'lists'));
+    return res.send(buffer);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/c/:id/export/order.xlsx', requireStaff, async (req, res, next) => {
+  try {
+    const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
+    if (!competition) return res.status(404).renderPage('error', { messageKey: 'errors.notFound' });
+    const buffer = await xlsx.orderWorkbook({ competitionId: competition.id, t: res.locals.t });
+    res.setHeader('Content-Type', xlsx.XLSX_TYPE);
+    res.setHeader('Content-Disposition', attachment(competition.slug, 'order'));
+    return res.send(buffer);
+  } catch (err) {
+    return next(err);
+  }
+});
 
 router.get('/c/:id/schedule', requireStaff, async (req, res, next) => {
   try {

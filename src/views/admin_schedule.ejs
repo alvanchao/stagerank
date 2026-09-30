@@ -30,7 +30,9 @@
     </select>
     <label for="bibstart"><%= t('schedule.bibStart') %></label>
     <input id="bibstart" type="number" name="start" value="1" min="1" style="max-width:120px">
-    <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('schedule.assignBibs') %></button></p>
+    <p style="margin-top:12px"><button type="submit" class="ghost"><%= t('schedule.assignBibs') %></button>
+      <a class="btn ghost" href="/admin/c/<%= competition.id %>/export/bibs.xlsx"><%= t('export.bibsButton') %></a>
+      <a class="btn ghost" href="/admin/c/<%= competition.id %>/export/lists.xlsx"><%= t('export.listsButton') %></a></p>
   </form>
   <span class="small muted"><%= roster.length %> <%= t('schedule.entries') %></span>
   <table style="margin-top:12px">
@@ -151,6 +153,7 @@
 
 <h2><%= t('schedule.runningOrder') %></h2>
 <div class="card">
+  <p><a class="btn ghost" href="/admin/c/<%= competition.id %>/export/order.xlsx"><%= t('export.orderButton') %></a></p>
   <form method="post" action="/admin/c/<%= competition.id %>/order/rebuild" style="display:inline">
     <button type="submit" class="ghost"><%= t('schedule.rebuild') %></button>
   </form>
