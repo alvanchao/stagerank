@@ -10,23 +10,10 @@
 <% if (message) { %><div class="notice"><%= t(message) %></div><% } %>
 <% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
 
-<h2><%= t('staffCodes.title') %></h2>
+<h2><%= t('staffApp.adminTitle') %></h2>
 <div class="card">
-  <p class="small muted"><%= t('staffCodes.hint') %></p>
-  <% ['desk','checkin','host'].forEach(function (r) { %>
-    <form method="post" action="/admin/c/<%= competition.id %>/staff-code" style="margin-bottom:12px">
-      <input type="hidden" name="role" value="<%= r %>">
-      <strong><%= t('staffCodes.' + r) %></strong>
-      <% if (newCodes && newCodes[r]) { %>
-        <div class="notice"><%= t('staffCodes.shownOnce') %>: <code class="voucher"><%= newCodes[r] %></code></div>
-      <% } else if (staffStatus[r]) { %>
-        <span class="small muted">· <%= t('staffCodes.issuedAt') %> <%= when(staffStatus[r]) %></span>
-      <% } else { %>
-        <span class="small muted">· <%= t('staffCodes.notIssued') %></span>
-      <% } %>
-      <button type="submit" class="ghost"><%= t(staffStatus[r] || (newCodes && newCodes[r]) ? 'staffCodes.regenerate' : 'staffCodes.generate') %></button>
-    </form>
-  <% }); %>
+  <p class="small muted"><%= t('staffApp.adminHint') %></p>
+  <a class="btn" href="/admin/c/<%= competition.id %>/staff"><%= t('staffApp.adminOpen') %></a>
 </div>
 
 <h2><%= t('admin.status') %></h2>

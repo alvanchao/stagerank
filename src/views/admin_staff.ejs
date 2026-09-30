@@ -1,0 +1,88 @@
+<p class="small"><a href="/admin/c/<%= competition.id %>">&larr; <%= competition.name %></a></p>
+<h1><%= t('staffApp.adminTitle') %></h1>
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<% if (cards) { %>
+  <div class="notice"><%= t('staffApp.shownOnce') %></div>
+  <p class="small"><button type="button" class="ghost" onclick="window.print()"><%= t('staffApp.print') %></button></p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+    <% cards.forEach(function (c) { %>
+      <div class="card" style="text-align:center;break-inside:avoid">
+        <strong><%= c.member.name %></strong>
+        <div class="small muted"><%= t('staffApp.role_' + c.member.role) %></div>
+        <div><%- c.qr %></div>
+        <div><code class="voucher"><%= c.code %></code></div>
+      </div>
+    <% }); %>
+  </div>
+<% } %>
+
+<h2><%= t('staffApp.addTitle') %></h2>
+<form class="card" method="post" action="/admin/c/<%= competition.id %>/staff">
+  <label for="role"><%= t('staffApp.role') %></label>
+  <select id="role" name="role">
+    <% ['desk','checkin','host'].forEach(function (r) { %><option value="<%= r %>"><%= t('staffApp.role_' + r) %></option><% }); %>
+  </select>
+  <label for="names"><%= t('staffApp.names') %></label>
+  <textarea id="names" name="names" rows="4" required></textarea>
+  <p class="small muted"><%= t('staffApp.namesHint') %></p>
+  <label><input type="checkbox" name="allowBrowser" value="1"> <%= t('staffApp.allowBrowser') %></label>
+  <p style="margin-top:16px"><button type="submit"><%= t('staffApp.create') %></button></p>
+</form>
+
+<h2><%= t('staffApp.members') %></h2>
+<% if (members.length === 0) { %>
+  <p class="muted"><%= t('staffApp.none') %></p>
+<% } else { %>
+<table>
+  <tr><th><%= t('export.name') %></th><th><%= t('staffApp.role') %></th><th><%= t('staffApp.status') %></th><th></th></tr>
+  <% members.forEach(function (m) { %>
+    <tr>
+      <td><%= m.name %></td>
+      <td><%= t('staffApp.role_' + m.role) %></td>
+      <td>
+        <% if (m.revoked_at) { %><span class="pill bad"><%= t('staffApp.revoked') %></span>
+        <% } else if (m.redeemed_at) { %><span class="pill ok"><%= t('staffApp.signedIn') %></span> <span class="small muted"><%= when(m.redeemed_at) %></span>
+        <% } else { %><span class="pill warn"><%= t('staffApp.notYet') %></span><% } %>
+      </td>
+      <td>
+        <form method="post" action="/admin/c/<%= competition.id %>/staff/<%= m.id %>/reissue" style="display:inline">
+          <button type="submit" class="ghost small"><%= t('staffApp.reissue') %></button>
+        </form>
+        <% if (!m.revoked_at) { %>
+        <form method="post" action="/admin/c/<%= competition.id %>/staff/<%= m.id %>/revoke" style="display:inline">
+          <button type="submit" class="ghost small"><%= t('staffApp.revoke') %></button>
+        </form>
+        <% } %>
+      </td>
+    </tr>
+  <% }); %>
+</table>
+<% } %>
+
+<h2><%= t('staffApp.endTitle') %></h2>
+<div class="card">
+  <p class="small muted"><%= t('staffApp.endHint') %></p>
+  <form method="post" action="/admin/c/<%= competition.id %>/end">
+    <% if (competition.ended_at) { %>
+      <input type="hidden" name="undo" value="1">
+      <span class="pill bad"><%= t('staffApp.ended') %></span>
+      <button type="submit" class="ghost"><%= t('staffApp.reopen') %></button>
+    <% } else { %>
+      <button type="submit" class="ghost"><%= t('staffApp.endButton') %></button>
+    <% } %>
+  </form>
+</div>
+
+<h2><%= t('staffApp.logTitle') %></h2>
+<% if (log.length === 0) { %>
+  <p class="muted"><%= t('staffApp.none') %></p>
+<% } else { %>
+<table>
+  <tr><th><%= t('staffApp.when') %></th><th><%= t('export.name') %></th><th><%= t('staffApp.role') %></th><th><%= t('staffApp.action') %></th></tr>
+  <% log.forEach(function (l) { %>
+    <tr><td><%= when(l.created_at) %></td><td><%= l.staff_name %></td><td><%= t('staffApp.role_' + l.role) %></td><td><code><%= l.action %></code></td></tr>
+  <% }); %>
+</table>
+<% } %>
+<style>@media print { header, footer, form, .btn, .notice, h2, table, .small { display: none !important; } }</style>

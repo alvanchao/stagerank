@@ -7,6 +7,7 @@ import * as stats from '../services/stats.js';
 import * as entrants from '../services/entrants.js';
 import * as feeGroups from '../services/feeGroups.js';
 import * as staffCodes from '../services/staffCodes.js';
+import QRCode from 'qrcode';
 import * as setup from '../services/setup.js';
 import { providerStatus } from '../payments/index.js';
 import { requireStaff as requireAdmin, safeEqual, STAFF_COOKIE as COOKIE } from '../middleware/auth.js';
@@ -47,24 +48,7 @@ router.post('/new', requireAdmin, async (req, res, next) => {
       feeCents: Number.parseInt(req.body.feeCents, 10) || 0,
       status: req.body.status === 'open' ? 'open' : 'draft',
     });
-    // 建立時就產生這場的通行碼，直接在回應頁顯示一次（不放在網址裡）。
-    // Issue this competition's passcodes at creation and show them once, never in a URL.
-    const newCodes = await staffCodes.issueAll(competition.id);
-    req.params.id = String(competition.id);
-    return renderAdminCompetition(req, res, { newCodes });
-  } catch (err) {
-    return next(err);
-  }
-});
-
-// 重新產生某個角色的通行碼，舊的立刻失效。
-// Regenerate one role's passcode; the old one stops working at once.
-router.post('/c/:id/staff-code', requireAdmin, async (req, res, next) => {
-  try {
-    const role = req.body.role;
-    if (!staffCodes.ROLES.includes(role)) return res.redirect(303, `/admin/c/${req.params.id}?error=errors.badRequest`);
-    const code = await staffCodes.issue(Number.parseInt(req.params.id, 10), role);
-    return renderAdminCompetition(req, res, { newCodes: { [role]: code } });
+    return res.redirect(303, `/admin/c/${competition.id}`);
   } catch (err) {
     return next(err);
   }
@@ -346,8 +330,6 @@ async function renderAdminCompetition(req, res, extra = {}) {
     feeGroups: await feeGroups.listGroups(competition.id),
     registrations: await regs.listRegistrations(competition.id),
     voucher: await voucherService.activeVoucher(competition.id),
-    staffStatus: await staffCodes.status(competition.id),
-    newCodes: null,
     message: null,
     error: req.query.error || null,
     ...extra,
@@ -356,6 +338,84 @@ async function renderAdminCompetition(req, res, extra = {}) {
 
 router.get('/c/:id', requireAdmin, (req, res, next) => {
   renderAdminCompetition(req, res).catch(next);
+});
+
+// ---------------------------------------------------------------- 工作人員 / staff
+
+async function renderStaff(req, res, { issued = null, error = null } = {}) {
+  const competition = await comps.getCompetition(Number.parseInt(req.params.id, 10));
+  if (!competition) {
+    res.status(404);
+    return res.renderPage('error', { title: res.locals.t('errors.notFound'), messageKey: 'errors.notFound' });
+  }
+  let cards = null;
+  if (issued) {
+    cards = [];
+    for (const item of issued) {
+      const link = `${config.baseUrl.replace(/\/$/, '')}/staff/app?code=${encodeURIComponent(item.code)}`;
+      cards.push({ ...item, qr: await QRCode.toString(link, { type: 'svg', margin: 1, width: 180 }) });
+    }
+  }
+  return res.renderPage('admin_staff', {
+    title: res.locals.t('staffApp.adminTitle'),
+    competition,
+    members: await staffCodes.listMembers(competition.id),
+    log: await staffCodes.recentLog(competition.id),
+    cards,
+    error,
+  });
+}
+
+router.get('/c/:id/staff', requireAdmin, (req, res, next) => {
+  renderStaff(req, res, { error: req.query.error || null }).catch(next);
+});
+
+router.post('/c/:id/staff', requireAdmin, async (req, res, next) => {
+  try {
+    const issued = await staffCodes.issueBatch(Number.parseInt(req.params.id, 10), {
+      role: req.body.role,
+      names: req.body.names,
+      allowBrowser: req.body.allowBrowser === '1',
+    });
+    return await renderStaff(req, res, { issued });
+  } catch (err) {
+    if (err instanceof staffCodes.StaffError) {
+      res.status(400);
+      return renderStaff(req, res, { error: err.key }).catch(next);
+    }
+    return next(err);
+  }
+});
+
+router.post('/c/:id/staff/:memberId/reissue', requireAdmin, async (req, res, next) => {
+  try {
+    const item = await staffCodes.reissue(Number.parseInt(req.params.memberId, 10), Number.parseInt(req.params.id, 10));
+    return await renderStaff(req, res, { issued: [item] });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/c/:id/staff/:memberId/revoke', requireAdmin, async (req, res, next) => {
+  try {
+    await staffCodes.revoke(Number.parseInt(req.params.memberId, 10), Number.parseInt(req.params.id, 10));
+    return res.redirect(303, `/admin/c/${req.params.id}/staff`);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// 結束比賽：所有工作人員的登入狀態立刻失效。
+// End the competition: every staff sign-in stops working at once.
+router.post('/c/:id/end', requireAdmin, async (req, res, next) => {
+  try {
+    const id = Number.parseInt(req.params.id, 10);
+    if (req.body.undo === '1') await staffCodes.reopenCompetition(id);
+    else await staffCodes.endCompetition(id);
+    return res.redirect(303, `/admin/c/${id}/staff`);
+  } catch (err) {
+    return next(err);
+  }
 });
 
 // 結束報名並產生憑證碼；重新結算走同一段程式。

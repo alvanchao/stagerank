@@ -72,7 +72,8 @@ test('工作人員的三個畫面都要通行碼 / all three staff screens need 
   const { competition } = await scenario();
   for (const path of [`/desk/${competition.id}`, `/checkin/${competition.id}`, `/host/${competition.id}`]) {
     const guarded = await http.get(path);
-    assert.ok((await guarded.text()).includes('name="token"'), `${path} is behind the passcode`);
+    assert.equal(guarded.status, 401, `${path} is behind the sign-in`);
+    assert.ok((await guarded.text()).includes('/staff/app'), `${path} points staff to the app`);
     const open = await http.get(path, staff());
     assert.equal(open.status, 200, `${path} opens with the passcode`);
   }
@@ -279,74 +280,120 @@ test('即時同步的連線開得起來 / the live feed connects', async () => {
   controller.abort();
 });
 
-// ---- 每場比賽各自的工作人員通行碼 / per-competition staff passcodes
-test('主持人與點錄的通行碼每場獨立、角色互不通用、重新產生後舊碼失效', async () => {
+// ---- 工作人員：每人一組專屬碼 / personal single-use staff codes
+async function staffWorld() {
   const a = await scenario();
-  const staffCodes = await import('../src/services/staffCodes.js');
-  const codesA = await staffCodes.issueAll(a.competition.id);
   const b = await scenario();
-  const codesB = await staffCodes.issueAll(b.competition.id);
+  const staffCodes = await import('../src/services/staffCodes.js');
+  const one = async (competition, role, name = '小明', allowBrowser = false) =>
+    (await staffCodes.issueBatch(competition.id, { role, names: name, allowBrowser }))[0];
+  return { a, b, staffCodes, one };
+}
+const cookieOf = (res) => ({ headers: { cookie: res.headers.get('set-cookie').split(';')[0] } });
+const app = (code, standalone = '1') => http.postForm('/staff/login', { code, standalone });
 
-  async function login(cid, role, token) {
-    return http.postForm(`/staff/${cid}/login`, { role, token });
-  }
-  const cookieOf = (res) => ({ headers: { cookie: res.headers.get('set-cookie').split(';')[0] } });
+test('碼只能用一次，登入後只進得了自己角色與自己那場 / single use, own role, own competition', async () => {
+  const { a, b, one } = await staffWorld();
+  const host = await one(a.competition, 'host', '主持人甲');
 
-  // 主持人碼：開得了自己那場的主持頁，開不了別場、開不了點錄與後台
-  const h = await login(a.competition.id, 'host', codesA.host);
-  assert.equal(h.status, 303);
-  const asHost = cookieOf(h);
+  const first = await app(host.code);
+  assert.equal(first.status, 303);
+  const asHost = cookieOf(first);
   assert.equal((await http.get(`/host/${a.competition.id}`, asHost)).status, 200);
-  assert.equal((await http.get(`/host/${b.competition.id}`, asHost)).status, 401);
-  assert.equal((await http.get(`/checkin/${a.competition.id}`, asHost)).status, 401);
-  assert.ok((await (await http.get(`/admin/c/${a.competition.id}`, asHost)).text()).includes('name="token"'), 'host is stopped at the admin login');
+  assert.equal((await http.get(`/host/${b.competition.id}`, asHost)).status, 401, 'another competition');
+  assert.equal((await http.get(`/checkin/${a.competition.id}`, asHost)).status, 401, 'another role');
+  assert.ok((await (await http.get(`/admin/c/${a.competition.id}`, asHost)).text()).includes('name="token"'), 'not the back office');
 
-  // 點錄碼：只能點錄／櫃檯
-  const c = await login(a.competition.id, 'checkin', codesA.checkin);
-  const asCheckin = cookieOf(c);
-  assert.equal((await http.get(`/checkin/${a.competition.id}`, asCheckin)).status, 200);
-  assert.equal((await http.get(`/desk/${a.competition.id}`, asCheckin)).status, 200);
-  assert.equal((await http.get(`/host/${a.competition.id}`, asCheckin)).status, 401);
-
-  // 別場的碼、亂猜的碼、角色搭錯，都進不去
-  assert.equal((await login(a.competition.id, 'host', codesB.host)).status, 401);
-  assert.equal((await login(a.competition.id, 'host', 'AAAAA-AAAAA')).status, 401);
-  assert.equal((await login(a.competition.id, 'checkin', codesA.host)).status, 401);
-
-  // 裁判 cookie 進不了主持人頁
-  const jl = await http.postForm(`/judge/login`, { code: a.judges[0].login_code });
-  const asJudge = { headers: { cookie: (jl.headers.get('set-cookie') || '').split(';')[0] } };
-  assert.equal((await http.get(`/host/${a.competition.id}`, asJudge)).status, 401);
-
-  // 重新產生：舊碼立刻失效，新碼可用
-  const fresh = await staffCodes.issue(a.competition.id, 'host');
-  assert.equal((await http.get(`/host/${a.competition.id}`, asHost)).status, 401);
-  assert.equal((await login(a.competition.id, 'host', fresh)).status, 303);
-
-  // 主辦通行碼仍然全部可用
-  assert.equal((await http.get(`/host/${a.competition.id}`, staff())).status, 200);
+  // 同一組碼第二次就用不了
+  const again = await app(host.code);
+  assert.equal(again.status, 400);
+  // 亂猜的碼也不行
+  assert.equal((await app('AAAAA-AAAAA')).status, 400);
 });
 
-test('報到密碼只進報到頁；點錄與主持人可以補救漏掉的報到', async () => {
-  const a = await scenario();
-  const staffCodes = await import('../src/services/staffCodes.js');
-  const codes = await staffCodes.issueAll(a.competition.id);
+test('報到只進報到頁；點錄與主持人可補救漏掉的報到 / desk is desk-only; check-in and host may rescue', async () => {
+  const { a, one } = await staffWorld();
   const cid = a.competition.id;
-  const cookieOf = (res) => ({ headers: { cookie: res.headers.get('set-cookie').split(';')[0] } });
-  const login = (role) => http.postForm(`/staff/${cid}/login`, { role, token: codes[role] });
-
-  const asDesk = cookieOf(await login('desk'));
+  const asDesk = cookieOf(await app((await one(a.competition, 'desk')).code));
   assert.equal((await http.get(`/desk/${cid}`, asDesk)).status, 200);
   assert.equal((await http.get(`/checkin/${cid}`, asDesk)).status, 401);
   assert.equal((await http.get(`/host/${cid}`, asDesk)).status, 401);
 
-  const asCheckin = cookieOf(await login('checkin'));
+  const asCheckin = cookieOf(await app((await one(a.competition, 'checkin')).code));
+  assert.equal((await http.get(`/checkin/${cid}`, asCheckin)).status, 200);
   assert.equal((await http.get(`/desk/${cid}`, asCheckin)).status, 200);
-  const asHost = cookieOf(await login('host'));
+  const asHost = cookieOf(await app((await one(a.competition, 'host')).code));
   assert.equal((await http.get(`/desk/${cid}`, asHost)).status, 200);
+});
 
-  // 別場的報到碼無效
-  const b = await scenario();
-  const codesB = await staffCodes.issueAll(b.competition.id);
-  assert.equal((await http.postForm(`/staff/${cid}/login`, { role: 'desk', token: codesB.desk })).status, 401);
+test('普通瀏覽器被擋，除非主辦允許備用 / a plain browser is refused unless allowed', async () => {
+  const { a, one } = await staffWorld();
+  const strict = await one(a.competition, 'host');
+  assert.equal((await app(strict.code, '0')).status, 400);
+  // 被擋不算用掉：裝好 App 之後同一組碼還能登入
+  assert.equal((await app(strict.code, '1')).status, 303);
+
+  const lax = await one(a.competition, 'host', '備用', true);
+  assert.equal((await app(lax.code, '0')).status, 303);
+});
+
+test('停用、重新產生、結束比賽，登入狀態立刻失效 / revoke, reissue and end kill the sign-in at once', async () => {
+  const { a, staffCodes, one } = await staffWorld();
+  const cid = a.competition.id;
+
+  const m1 = await one(a.competition, 'host', '甲');
+  const s1 = cookieOf(await app(m1.code));
+  assert.equal((await http.get(`/host/${cid}`, s1)).status, 200);
+  await staffCodes.revoke(m1.member.id, cid);
+  assert.equal((await http.get(`/host/${cid}`, s1)).status, 401, 'revoked');
+
+  const m2 = await one(a.competition, 'host', '乙');
+  const s2 = cookieOf(await app(m2.code));
+  const fresh = await staffCodes.reissue(m2.member.id, cid);
+  assert.equal((await http.get(`/host/${cid}`, s2)).status, 401, 'reissue voids the old sign-in');
+  const s2b = cookieOf(await app(fresh.code));
+  assert.equal((await http.get(`/host/${cid}`, s2b)).status, 200);
+
+  await staffCodes.endCompetition(cid);
+  assert.equal((await http.get(`/host/${cid}`, s2b)).status, 401, 'competition ended');
+  assert.equal((await app((await one(a.competition, 'host', '丙')).code)).status, 400, 'no new sign-in after the end');
+  await staffCodes.reopenCompetition(cid);
+  assert.equal((await http.get(`/host/${cid}`, s2b)).status, 200, 'undo the end');
+});
+
+test('操作紀錄記下是誰做的；主辦後台能建一批並顯示 QR / the log names who did it; the admin page issues a batch with QR', async () => {
+  const { a, staffCodes, one } = await staffWorld();
+  const cid = a.competition.id;
+
+  // 主辦一次貼三個名字
+  const page = await http.postForm(`/admin/c/${cid}/staff`, { role: 'checkin', names: '小華\n小美\n小強', allowBrowser: '1' }, staff());
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.equal((html.match(/<svg/g) || []).length, 3, 'one QR per person');
+  assert.ok(html.includes('小華') && html.includes('小強'));
+  assert.equal((await staffCodes.listMembers(cid)).length, 3);
+
+  // 沒帶主辦通行碼進不去
+  assert.ok((await (await http.postForm(`/admin/c/${cid}/staff`, { role: 'host', names: '壞人' })).text()).includes('name="token"'));
+
+  // 點錄人員做了一件事，紀錄裡有他的名字
+  const m = await one(a.competition, 'host', '主持人甲');
+  const asHost = cookieOf(await app(m.code));
+  const { entries } = await (await import('../src/services/schedule.js')).heatWithEntries(a.heats[0].id);
+  await http.postForm(`/host/${cid}/add/${entries[0].id}`, {}, asHost);
+  await new Promise((r) => setTimeout(r, 100));
+  const log = await staffCodes.recentLog(cid);
+  assert.ok(log.some((l) => l.staff_name === '主持人甲' && /host/.test(l.action)), 'the log names the host');
+});
+
+test('App 登入頁與安裝設定 / the staff app page and its manifest', async () => {
+  const page = await http.get('/staff/app?code=abcde-12345');
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.ok(html.includes('value="ABCDE-12345"'), 'the scanned code is prefilled but not used');
+  assert.ok(html.includes('rel="manifest"'));
+  const manifest = await http.get('/manifest.webmanifest');
+  assert.equal(manifest.status, 200);
+  assert.equal((await manifest.json()).display, 'standalone');
+  assert.equal((await http.get('/icon-192.png')).status, 200);
 });

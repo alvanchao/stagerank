@@ -1,5 +1,6 @@
-// 報到、檢錄、主持人控場。三個角色都用主辦通行碼進入。
-// Registration desk, check-in and floor control. All three staff roles use the organiser passcode.
+// 報到、檢錄、主持人控場。各角色用自己的專屬碼登入，主辦通行碼可以進所有畫面。
+// Registration desk, check-in and floor control. Each role signs in with a personal code; the
+// organiser passcode opens all of them.
 
 import express from 'express';
 import config from '../config.js';
@@ -10,7 +11,7 @@ import * as scoring from '../services/scoring.js';
 import * as judgeService from '../services/judges.js';
 import * as roundDecisions from '../services/roundDecisions.js';
 import { sseHandler } from '../services/realtime.js';
-import { requireRole, staffCookieName } from '../middleware/auth.js';
+import { requireRole, readCookie, STAFF_SESSION_COOKIE } from '../middleware/auth.js';
 import * as staffCodes from '../services/staffCodes.js';
 
 const asHost = requireRole('host');
@@ -24,28 +25,44 @@ const router = express.Router();
 
 // 即時同步：所有角色的畫面都掛在這條連線上。
 // The live feed every staff and judge screen listens to.
-// 工作人員用「這場比賽的」通行碼登入。
-// Staff sign in with this competition's own passcode.
-router.post('/staff/:competitionId/login', async (req, res, next) => {
+// 工作人員 App：掃 QR 或輸入自己的專屬碼登入。碼只能用一次。
+// The staff app: sign in by scanning a QR or typing your personal code. A code works once.
+const HOME = { desk: 'desk', checkin: 'checkin', host: 'host' };
+const homeFor = (member) => `/${HOME[member.role]}/${member.competition_id}`;
+
+function renderStaffApp(res, { code = '', error = null, status = 200 } = {}) {
+  res.status(status);
+  return res.renderPage('staff_app', { title: res.locals.t('staffApp.title'), code, error });
+}
+
+router.get('/staff/app', async (req, res, next) => {
   try {
-    const competitionId = Number.parseInt(req.params.competitionId, 10);
-    const role = req.body.role;
-    if (!(await staffCodes.verify(competitionId, role, req.body.token))) {
-      return res.status(401).renderPage('admin_login', {
-        title: res.locals.t('admin.title'),
-        hasToken: true,
-        error: 'admin.tokenInvalid',
-        staffLogin: { competitionId, roles: staffCodes.ROLES },
-      });
-    }
-    res.setHeader(
-      'Set-Cookie',
-      `${staffCookieName(competitionId, role)}=${encodeURIComponent(String(req.body.token).trim())}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200`,
-    );
-    return res.redirect(303, `/${role === 'desk' ? 'desk' : role}/${competitionId}`);
+    const member = await staffCodes.fromCookie(readCookie(req.headers.cookie, STAFF_SESSION_COOKIE));
+    if (member) return res.redirect(303, homeFor(member));
+    return renderStaffApp(res, { code: staffCodes.extractCode(req.query.code || '') });
   } catch (err) {
     return next(err);
   }
+});
+
+router.post('/staff/login', async (req, res, next) => {
+  try {
+    const code = staffCodes.extractCode(req.body.code);
+    const { member, cookieValue } = await staffCodes.redeem(code, { standalone: req.body.standalone === '1' });
+    res.setHeader(
+      'Set-Cookie',
+      `${STAFF_SESSION_COOKIE}=${encodeURIComponent(cookieValue)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${staffCodes.SESSION_MAX_AGE_SECONDS}`,
+    );
+    return res.redirect(303, homeFor(member));
+  } catch (err) {
+    if (err instanceof staffCodes.StaffError) return renderStaffApp(res, { code: '', error: err.key, status: 400 });
+    return next(err);
+  }
+});
+
+router.post('/staff/logout', (req, res) => {
+  res.setHeader('Set-Cookie', `${STAFF_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  return res.redirect(303, '/staff/app');
 });
 
 router.get('/events/:competitionId', (req, res) => {

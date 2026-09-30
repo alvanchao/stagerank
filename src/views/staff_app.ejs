@@ -1,0 +1,28 @@
+<h1><%= t('staffApp.title') %></h1>
+
+<% if (error) { %><div class="notice bad"><%= t(error) %></div><% } %>
+
+<div id="install" class="card" hidden>
+  <h2 style="margin-top:0"><%= t('staffApp.installTitle') %></h2>
+  <p><%= t('staffApp.installWhy') %></p>
+  <ol>
+    <li><%= t('staffApp.installIos') %></li>
+    <li><%= t('staffApp.installAndroid') %></li>
+    <li><%= t('staffApp.installThen') %></li>
+  </ol>
+</div>
+
+<form id="login" class="card" method="post" action="/staff/login">
+  <input type="hidden" name="standalone" id="standalone" value="0">
+  <label for="code"><%= t('staffApp.codeLabel') %></label>
+  <input id="code" type="text" name="code" value="<%= code %>" autocomplete="off" autocapitalize="characters" required>
+  <p class="small muted" id="scanNote" hidden><%= t('staffApp.scanNote') %></p>
+  <p style="margin-top:16px">
+    <button type="button" class="ghost" id="scan" hidden><%= t('staffApp.scan') %></button>
+    <button type="submit"><%= t('staffApp.signIn') %></button>
+  </p>
+  <video id="preview" playsinline muted hidden style="width:100%;border-radius:8px"></video>
+</form>
+
+<p class="small muted"><%= t('staffApp.onceNote') %></p>
+<script src="/staff-app.js"></script>
