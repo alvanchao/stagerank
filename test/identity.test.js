@@ -104,3 +104,18 @@ test('正式模式不啟用假 Google / mock is refused in production', async ()
     config.google.mock = before;
   }
 });
+
+test('config：production 下假 Google 要明確開關 / mock under production needs the explicit switch', async () => {
+  const run = (env) => new Promise((resolve, reject) => {
+    import('node:child_process').then(({ execFile }) => execFile(
+      process.execPath,
+      ['--input-type=module', '-e', "const { default: c } = await import('./src/config.js'); console.log(c.google.mock);"],
+      { env: { ...process.env, ...env }, cwd: process.cwd() },
+      (err, out) => (err ? reject(err) : resolve(out.trim())),
+    ));
+  });
+  assert.equal(await run({ GOOGLE_LOGIN_MOCK: 'true', NODE_ENV: 'production', ALLOW_MOCK_IN_PRODUCTION: '' }), 'false');
+  assert.equal(await run({ GOOGLE_LOGIN_MOCK: 'true', NODE_ENV: 'production', ALLOW_MOCK_IN_PRODUCTION: 'true' }), 'true');
+  assert.equal(await run({ GOOGLE_LOGIN_MOCK: 'true', NODE_ENV: 'development', ALLOW_MOCK_IN_PRODUCTION: '' }), 'true');
+  assert.equal(await run({ GOOGLE_LOGIN_MOCK: '', NODE_ENV: 'development', ALLOW_MOCK_IN_PRODUCTION: 'true' }), 'false');
+});

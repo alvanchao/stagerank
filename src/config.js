@@ -90,7 +90,10 @@ export const config = {
   google: {
     clientId: str(env.GOOGLE_CLIENT_ID, ''),
     clientSecret: str(env.GOOGLE_CLIENT_SECRET, ''),
-    mock: bool(env.GOOGLE_LOGIN_MOCK, false) && str(env.NODE_ENV, 'development') !== 'production',
+    // 正式環境（NODE_ENV=production）預設拒絕；測試站要用，必須另外明確設 ALLOW_MOCK_IN_PRODUCTION=true。
+    // Refused under NODE_ENV=production unless ALLOW_MOCK_IN_PRODUCTION=true is also set on purpose (a test site).
+    mock: bool(env.GOOGLE_LOGIN_MOCK, false)
+      && (str(env.NODE_ENV, 'development') !== 'production' || bool(env.ALLOW_MOCK_IN_PRODUCTION, false)),
     get real() { return Boolean(this.clientId && this.clientSecret); },
     get enabled() { return this.real || this.mock; },
   },

@@ -20,6 +20,7 @@ async function start() {
   app.listen(config.port, () => {
     console.log(`StageRank listening on ${config.baseUrl} (${config.env})`);
     if (config.mail.pretend) console.warn('[stagerank] MAIL_MODE=pretend: login codes are shown on screen. Test site only; turn it off before a real event.');
+    if (config.google.mock) console.warn('[stagerank] GOOGLE_LOGIN_MOCK is on: anyone who knows an ADMIN_EMAILS address can sign in as organiser. Test site only; turn it off before a real event.');
     if (!config.adminToken) console.warn('[stagerank] ADMIN_TOKEN is not set: the back office is disabled.');
   });
 
