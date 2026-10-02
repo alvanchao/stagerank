@@ -69,3 +69,32 @@ The organiser passcode (`ADMIN_TOKEN`) still works as a fallback. Leave it set s
 - Your hosting plan still covers the event dates (a free trial can end) / 確認主機方案在比賽日期仍有效。
 - The database has a backup you have actually tested restoring / 資料庫備份，而且試過還原。
 - Competitors' real names and any minors' data are never published; results screens show only what you chose to publish / 真實姓名與未成年資料不外流。
+
+## 5. Usage statistics need a real address / 使用統計需要正式網址
+
+StageRank always sends a small anonymous usage summary (there is no switch for it; see the README, "What we send back"). For it to be accepted, two things must be true.
+StageRank 固定會送一份匿名使用統計（沒有關閉開關，詳見 README 的「What we send back」）。要被收集端接受，需要兩件事：
+
+1. **`BASE_URL` is your real `https` address** — the one visitors use, with no further redirect (so not a `www` ↔ no-`www` hop). Until then the organiser dashboard shows a notice and nothing is sent.
+   **`BASE_URL` 是你的正式 `https` 網址**，也就是訪客真正用的那個，不能再轉址（例如 `www` 與沒有 `www` 互轉）。設好之前後台會顯示提示，也不會送出任何東西。
+2. **The proof file is reachable.** The first time a collector hears from your site it reads `/.well-known/stagerank-usage.json` to check the site really owns its address. Test it yourself:
+   **驗證檔讀得到。** 收集端第一次收到你的網站回報時，會去讀 `/.well-known/stagerank-usage.json` 確認這個網址真的是你的。自己檢查：
+
+```
+curl -i https://your-site.example/.well-known/stagerank-usage.json
+```
+
+Expected / 預期結果: `200`, `Content-Type: application/json`, **no `Location` header**, and a body that only contains `key_hash`.
+
+Common reasons it fails / 常見失敗原因:
+
+| Situation / 狀況 | What to do / 處理 |
+| --- | --- |
+| `www` and non-`www` redirect to each other / 網址互轉 | Set `BASE_URL` to the final address that does not redirect. / 把 `BASE_URL` 設成不會再轉址的那個網址。 |
+| nginx / Apache has its own rule for `/.well-known/` / 反向代理對這個路徑另有規則 | Make sure `/.well-known/stagerank-usage.json` is passed to the StageRank app. / 確認它會轉給 StageRank。 |
+| A bot-protection or WAF challenge page (for example Cloudflare) / 防護挑戰頁 | Allow this one path through. / 對這個路徑放行。 |
+| Only `http`, no `https` / 只有 http | Set up https first; a first claim over plain http is refused. / 先設好 https，純 http 無法第一次認領。 |
+
+If the collector refuses a report with 403 the dashboard shows a notice. The site key is only a proof that the URL is yours: its hash is public in that file, the key itself is never published. If you reinstall and lose the key, ask the maintainer to release the old claim.
+如果收集端用 403 拒絕，後台會顯示提示。網站金鑰只是「這個網址是我的」的證明：驗證檔裡只有它的雜湊，金鑰本身不會公開。如果重新安裝而弄丟金鑰，請聯絡維護者解除舊的登記。
+

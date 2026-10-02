@@ -7,7 +7,6 @@ process.env.DATABASE_URL =
 process.env.BASE_URL = 'http://127.0.0.1:0';
 process.env.SITE_NAME = 'Test Cup';
 process.env.ADMIN_TOKEN = 'test-admin-token';
-process.env.STAGERANK_REPORT_USAGE = 'false';
 
 // 四家金流都開，金鑰用假的但格式正確，這樣測試不必連外網。
 // All four providers are enabled with well-formed fake keys, so no test needs the network.

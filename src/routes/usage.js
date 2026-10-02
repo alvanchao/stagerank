@@ -1,3 +1,7 @@
+// ⚠ 僅供維護者的「測試站」使用。這一版沒有網站金鑰與網域驗證，不能當正式收集端公開。
+// ⚠ 正式收集端請用 collector-worker/（Cloudflare Worker 版）。
+// ⚠ For the maintainer's test site only: no site keys, no domain verification. Do not expose it as the real
+// ⚠ collector; use collector-worker/ (the Cloudflare Worker) for that.
 // 收集端：接收各站台的匿名統計，並給維護者看合計。預設關閉（STAGERANK_COLLECTOR=true 才開）。
 // Collector: receives anonymous usage reports and shows the maintainer the totals. Off unless STAGERANK_COLLECTOR=true.
 import express from 'express';

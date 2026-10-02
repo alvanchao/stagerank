@@ -103,6 +103,7 @@ export async function reportAfterPayment(registrationId) {
      WHERE r.competition_id = $1 AND p.status = 'paid' GROUP BY p.provider, p.sandbox`,
     [reg.competition_id],
   );
+  if (!reportable()) return { sent: 0, failed: 0, skipped: true };
   const payload = buildPayload({ competition, byProvider, voucher });
   const replaced = await one(
     `UPDATE usage_reports SET payload = $2
@@ -114,8 +115,25 @@ export async function reportAfterPayment(registrationId) {
   return flushReports();
 }
 
+// 這個網站的網址能不能被統計：必須是 https 的正式網域。localhost、IP 位址、沒有點的主機名都不回報，
+// 否則收集端一定拒收、白白重試 14 天。（維護者用環境變數指定測試收集端時不受限制。）
+// Can this site's URL be counted? It must be a real https host. localhost, IP addresses and dotless hosts are
+// not reported, because the collector would refuse them and the report would be retried for 14 days for nothing.
+// (A maintainer who points reports at a test collector with the endpoint variable is exempt.)
+export function reportable() {
+  if (config.telemetry.endpointOverride) return true;
+  let url;
+  try { url = new URL(config.baseUrl); } catch { return false; }
+  const host = url.hostname;
+  return url.protocol === 'https:' && host.includes('.') && !/^[\d.]+$/.test(host) && !host.includes(':');
+}
+
+export function needsRealUrl() {
+  return config.telemetry.enabled && !reportable();
+}
+
 export async function queueReport(payload) {
-  if (!config.telemetry.enabled) return null;
+  if (!config.telemetry.enabled || !reportable()) return null;
   return one('INSERT INTO usage_reports (payload) VALUES ($1) RETURNING *', [JSON.stringify(payload)]);
 }
 
@@ -125,6 +143,13 @@ export async function resolveEndpoint({ fetchImpl = fetch } = {}) {
   if (!response.ok) throw new Error(`telemetry config ${response.status}`);
   const json = await response.json();
   if (!json?.endpoint) throw new Error('telemetry config has no endpoint');
+  // 設定檔只能指到寫死在程式裡的收集端主機，而且必須是 https。
+  // The config file may only point at a collector host that is hard-coded here, and only over https.
+  let url;
+  try { url = new URL(json.endpoint); } catch { throw new Error('telemetry endpoint is not a URL'); }
+  if (url.protocol !== 'https:' || !config.telemetry.allowedHosts.includes(url.hostname)) {
+    throw new Error('telemetry endpoint is not an allowed collector');
+  }
   return json.endpoint;
 }
 
@@ -145,8 +170,7 @@ export async function flushReports({ fetchImpl = fetch, limit = 20 } = {}) {
   try {
     endpoint = await resolveEndpoint({ fetchImpl });
   } catch (err) {
-    await query('UPDATE usage_reports SET attempts = attempts + 1, last_error = $2 WHERE sent_at IS NULL', [
-      null,
+    await query('UPDATE usage_reports SET attempts = attempts + 1, last_error = $1 WHERE sent_at IS NULL', [
       `endpoint: ${err.message}`,
     ]);
     return { sent: 0, failed: rows.length, error: err.message };
@@ -162,6 +186,9 @@ export async function flushReports({ fetchImpl = fetch, limit = 20 } = {}) {
       const body = { ...row.payload, site: { ...row.payload.site, key: siteKey } };
       const response = await fetchImpl(endpoint, {
         method: 'POST',
+        // 不跟隨轉址：否則收集端回 307/308 時，帶著網站金鑰的內容會被原封不動送到轉址目標。
+        // Never follow redirects: a 307/308 would otherwise forward the body, site key included, to another host.
+        redirect: 'error',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -190,4 +217,4 @@ export async function recentlyRefused() {
   return row.n > 0;
 }
 
-export default { getSiteKey, siteKeyHash, recentlyRefused, buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };
+export default { reportable, needsRealUrl, getSiteKey, siteKeyHash, recentlyRefused, buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };

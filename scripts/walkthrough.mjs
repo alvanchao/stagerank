@@ -10,7 +10,6 @@ process.env.SITE_NAME = '陽光盃國標舞錦標賽';
 process.env.BASE_URL = 'http://127.0.0.1:4173';
 process.env.PORT = '4173';
 process.env.ADMIN_TOKEN = 'demo-token';
-process.env.STAGERANK_REPORT_USAGE = 'false';
 process.env.ECPAY_ENABLED = 'true';
 process.env.ECPAY_SANDBOX = 'true';
 process.env.ECPAY_MERCHANT_ID = '3002607';

@@ -92,3 +92,111 @@ test('被收集端拒絕（403）時主辦後台會提示 / a 403 from the colle
     config.telemetry.enabled = false;
   }
 });
+
+// ---- 第四輪審查補上的測試 / tests added after the fourth review round
+
+const withConfig = async (patch, fn) => {
+  const saved = {
+    baseUrl: config.baseUrl,
+    enabled: config.telemetry.enabled,
+    override: config.telemetry.endpointOverride,
+    hosts: config.telemetry.allowedHosts,
+  };
+  Object.assign(config, { baseUrl: patch.baseUrl ?? config.baseUrl });
+  config.telemetry.enabled = patch.enabled ?? true;
+  config.telemetry.endpointOverride = patch.override ?? '';
+  config.telemetry.allowedHosts = patch.hosts ?? [];
+  try { await fn(); } finally {
+    config.baseUrl = saved.baseUrl;
+    config.telemetry.enabled = saved.enabled;
+    config.telemetry.endpointOverride = saved.override;
+    config.telemetry.allowedHosts = saved.hosts;
+  }
+};
+const configFetch = (endpoint) => async () => ({ ok: true, status: 200, json: async () => ({ endpoint }) });
+
+test('並行第一次產生也拿到同一把金鑰 / two concurrent first calls end up with the same key', async () => {
+  await query("DELETE FROM app_settings WHERE key = 'usage.site_key'");
+  const keys = await Promise.all([stats.getSiteKey(), stats.getSiteKey(), stats.getSiteKey()]);
+  assert.equal(new Set(keys).size, 1);
+  assert.equal(keys[0], await stats.getSiteKey());
+});
+
+test('抓不到回報網址時，失敗原因有記下來 / when the endpoint cannot be read, the reason is recorded', async () => {
+  await withConfig({ baseUrl: 'https://site.example' }, async () => {
+    await query('DELETE FROM usage_reports');
+    await stats.queueReport(payloadOf('abcdef21'));
+    const result = await stats.flushReports({ fetchImpl: async () => ({ ok: false, status: 500 }) });
+    assert.equal(result.failed, 1);
+    const row = await one('SELECT attempts, last_error FROM usage_reports');
+    assert.equal(row.attempts, 1);
+    assert.match(row.last_error, /endpoint: telemetry config 500/);
+  });
+});
+
+test('設定檔只能指到寫死的 https 收集端 / the config file may only point at a hard-coded https collector', async () => {
+  await withConfig({ hosts: ['collector.example'] }, async () => {
+    assert.equal(await stats.resolveEndpoint({ fetchImpl: configFetch('https://collector.example/usage') }), 'https://collector.example/usage');
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('http://collector.example/usage') }), /not an allowed collector/);
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('https://evil.example/usage') }), /not an allowed collector/);
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('not a url') }), /not a URL/);
+  });
+  await withConfig({ hosts: [] }, async () => {
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('https://collector.example/usage') }), /not an allowed collector/);
+  });
+});
+
+test('被拒的收集端網址不會收到任何金鑰 / a refused endpoint never receives the key', async () => {
+  await withConfig({ baseUrl: 'https://site.example', hosts: ['collector.example'] }, async () => {
+    await query('DELETE FROM usage_reports');
+    await stats.queueReport(payloadOf('abcdef22'));
+    let posted = 0;
+    const fetchImpl = async (url) => {
+      if (String(url).endsWith('telemetry.json')) return configFetch('https://evil.example/usage')();
+      posted += 1;
+      return { ok: true, status: 200 };
+    };
+    const result = await stats.flushReports({ fetchImpl });
+    assert.equal(posted, 0);
+    assert.equal(result.sent, 0);
+  });
+});
+
+test('送出時不跟隨轉址 / the POST never follows redirects', async () => {
+  await withConfig({ override: 'https://collector.invalid/usage', baseUrl: 'https://site.example' }, async () => {
+    await query('DELETE FROM usage_reports');
+    await stats.queueReport(payloadOf('abcdef23'));
+    let init = null;
+    await stats.flushReports({ fetchImpl: async (url, i) => { init = i; return { ok: true, status: 200 }; } });
+    assert.equal(init.redirect, 'error');
+  });
+});
+
+test('沒有正式網址就不回報 / nothing is reported until BASE_URL is a real https address', async () => {
+  const cases = [
+    ['http://localhost:3000', false], ['https://localhost', false], ['https://127.0.0.1', false],
+    ['http://site.example', false], ['https://[::1]', false], ['https://site.example', true], ['https://a.b.example', true],
+  ];
+  for (const [baseUrl, expected] of cases) {
+    await withConfig({ baseUrl }, async () => assert.equal(stats.reportable(), expected, baseUrl));
+  }
+  await withConfig({ baseUrl: 'http://localhost:3000' }, async () => {
+    await query('DELETE FROM usage_reports');
+    assert.equal(await stats.queueReport(payloadOf('abcdef24')), null);
+    assert.equal((await one('SELECT COUNT(*)::int AS n FROM usage_reports')).n, 0);
+  });
+  await withConfig({ baseUrl: 'http://localhost:3000', override: 'https://collector.invalid/usage' }, async () => {
+    assert.equal(stats.reportable(), true, 'a maintainer test collector is exempt');
+  });
+});
+
+test('沒設正式網址時後台有提示 / the dashboard says so while BASE_URL is not a real address', async () => {
+  await withConfig({ baseUrl: 'http://localhost:3000' }, async () => {
+    const page = await fetch(`${http.base}/admin`, { headers: { Cookie: 'stagerank_admin=test-admin-token' } });
+    assert.match(await page.text(), /BASE_URL/);
+  });
+  await withConfig({ baseUrl: 'https://site.example' }, async () => {
+    const page = await fetch(`${http.base}/admin`, { headers: { Cookie: 'stagerank_admin=test-admin-token' } });
+    assert.ok(!(await page.text()).includes('BASE_URL 必須'));
+  });
+});

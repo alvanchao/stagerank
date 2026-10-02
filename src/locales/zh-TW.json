@@ -228,7 +228,8 @@
     "googleMockTitle": "假 Google 登入（測試）",
     "googleMockEmail": "信箱",
     "googleNotListed": "這個信箱不在主辦名單內。",
-    "usageRefused": "使用統計沒有送出去：這個網站的網址可能已被別人認領，或收集端讀不到驗證檔（/.well-known/stagerank-usage.json）。比賽不受影響，請聯絡專案維護者。"
+    "usageRefused": "使用統計沒有送出去：這個網站的網址可能已被別人認領，或收集端讀不到驗證檔（/.well-known/stagerank-usage.json）。比賽不受影響，請聯絡專案維護者。",
+    "usageNeedsUrl": "還沒設定正式網址（BASE_URL 必須是 https 的正式網域），所以這個網站目前不會送出使用統計。比賽不受影響。"
   },
   "errors": {
     "notFound": "找不到這個頁面",

@@ -9,7 +9,6 @@ process.env.DATABASE_URL = 'postgres://postgres:devpass@127.0.0.1:5432/stagerank
 process.env.SITE_NAME = '陽光盃國標舞錦標賽';
 process.env.BASE_URL = 'http://127.0.0.1:4174';
 process.env.ADMIN_TOKEN = 'demo-token';
-process.env.STAGERANK_REPORT_USAGE = 'false';
 process.env.ECPAY_ENABLED = 'true';
 process.env.ECPAY_SANDBOX = 'true';
 process.env.ECPAY_MERCHANT_ID = '3002607';

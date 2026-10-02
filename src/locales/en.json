@@ -228,7 +228,8 @@
     "googleMockTitle": "Pretend Google sign-in (test)",
     "googleMockEmail": "Email",
     "googleNotListed": "This email is not on the organiser list.",
-    "usageRefused": "Usage statistics were not accepted: this site's URL may already be claimed, or the collector could not read the proof file (/.well-known/stagerank-usage.json). Competitions are not affected; please contact the project maintainer."
+    "usageRefused": "Usage statistics were not accepted: this site's URL may already be claimed, or the collector could not read the proof file (/.well-known/stagerank-usage.json). Competitions are not affected; please contact the project maintainer.",
+    "usageNeedsUrl": "No real site address is set yet (BASE_URL must be an https production domain), so this site is not sending usage statistics at the moment. Competitions are not affected."
   },
   "errors": {
     "notFound": "Page not found",

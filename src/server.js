@@ -28,6 +28,10 @@ async function start() {
   // Partner ids: fetched on boot, then daily. Unreachable means blank, and transactions proceed.
   scheduleRemoteIds();
 
+  if (config.collector.enabled) {
+    console.warn('[stagerank] WARNING: the built-in usage collector is on. It is for the maintainer\'s test site only; use collector-worker/ as the real collector.');
+  }
+
   // 統計回報每 6 小時試送一次，失敗只記錄、不影響比賽。
   // Usage reports retry every 6 hours; failures are logged and never affect a competition.
   if (config.telemetry.enabled) {

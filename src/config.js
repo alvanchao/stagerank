@@ -127,7 +127,19 @@ export const config = {
     projectUrl: 'https://github.com/alvanchao/stagerank',
   },
   telemetry: {
-    enabled: bool(env.STAGERANK_REPORT_USAGE, true),
+    // 匿名統計回報固定開啟，沒有環境變數可以關掉（董事長裁示）。程式是 MIT 開源，不想回報的人可以自行修改程式。
+    // 這件事在 README 與安裝說明裡公開寫明。測試程式會直接把這個欄位設成 false。
+    // Anonymous usage reporting is always on; there is deliberately no environment switch (a project decision).
+    // The code is MIT, so anyone who does not want it can change the code. This is stated openly in the README
+    // and the setup docs. Tests flip this field directly.
+    enabled: true,
+    // 只有這些主機可以收回報（從 GitHub 設定檔讀到的網址一定要在這份名單裡，而且必須是 https）。
+    // 這份名單是寫在程式裡的，所以設定檔被改掉或打錯，網站金鑰也不會被送去別處。
+    // 正式收集端（Cloudflare Worker）的網址確定後，要在這裡填上它的主機名。
+    // Only these hosts may receive reports: an endpoint read from the GitHub config must be https and listed here.
+    // The list lives in the code, so a changed or mistyped config file can never send site keys elsewhere.
+    // Fill in the Worker's host name here once the real collector exists.
+    allowedHosts: [],
     // 回報網址不寫死：先讀 GitHub 上的設定檔，換帳號時舊版也跟著改。
     // The endpoint is not hard-coded: it is read from a config file on GitHub so old installs follow a move.
     configUrl: str(

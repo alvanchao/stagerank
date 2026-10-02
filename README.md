@@ -206,13 +206,20 @@ Neither costs you anything. Neither affects your money — payments go straight 
 
 ## What we send back
 
-If `STAGERANK_REPORT_USAGE` is on (the default), a report is queued when a competition is settled, containing:
+**This is always on, and there is deliberately no setting to switch it off.** It is a project decision, stated here openly. StageRank is MIT-licensed, so anyone who does not want it may change the code themselves (the reporting lives in `src/services/stats.js`).
+
+A summary is queued when a competition is settled and again after every successful online payment, containing:
 
 - your site URL and name,
 - per-provider payment counts and totals, and whether the partner IDs were intact,
-- the number of competitors in the settled roster.
+- the number of competitors in the settled roster,
+- a random **site key** (see below).
 
-It contains **no competitor data of any kind** — not names, not emails, not even the competition's name — and **no keys**. Set `STAGERANK_REPORT_USAGE=false` to send nothing at all. A failed report never affects a competition in progress.
+It contains **no competitor data of any kind** — not names, not emails, not even the competition's name — and **no payment keys**. A failed report never affects a competition in progress; it is retried for up to 14 days and then dropped.
+
+Nothing is sent until the site has a real address: `BASE_URL` must be an `https` production domain (not `localhost`, not an IP address), and the dashboard says so until it is set.
+
+**The site key.** The first time it reports, each install makes one random key and keeps it only in its own database. It is only used to prove the URL is yours: the site publishes just the key's *hash* at `/.well-known/stagerank-usage.json`, and the key itself is never published. See [`docs/GOING-LIVE.md`](docs/GOING-LIVE.md) for how to check that file is reachable.
 
 The endpoint is not hard-coded: it is read from [`telemetry.json`](telemetry.json) in this repository, so it can move without anyone having to update their install.
 
@@ -248,8 +255,8 @@ Honest list, so nobody is surprised:
 
 ## Usage statistics and the collector
 
-Each install sends a small anonymous summary right after every successful online payment (and again when the organiser closes registration), containing (competition count, entry count, per-provider payment counts and totals, whether partner IDs are intact). It never contains competitor names, emails or any payment key, and an organiser can switch it off with `STAGERANK_REPORT_USAGE=false`. Where reports go is read from `telemetry.json` in this repository.
+Each install sends a small anonymous summary right after every successful online payment (and again when the organiser closes registration), containing (competition count, entry count, per-provider payment counts and totals, whether partner IDs are intact). It never contains competitor names, emails or any payment key, and there is deliberately no setting to switch it off (see "What we send back"). Where reports go is read from `telemetry.json` in this repository, and only to a collector host that is hard-coded in the program, over https.
 
 Each install makes one random **site key** the first time it reports and keeps it in its own database. The report carries that key so a collector can tell later reports from the same site; the site also publishes only the key's hash at `/.well-known/stagerank-usage.json`, which a collector can read once to check that the site really owns its URL. Reports that cannot be delivered are retried for up to 14 days and then dropped, and if the collector refuses one with 403 the organiser dashboard shows a notice. None of this affects a competition.
 
-The maintainer's own server can receive them: set `STAGERANK_COLLECTOR=true` and the server accepts `POST /usage` and shows totals to the organiser at `/admin/usage` (sites, competitions, entries, amounts per provider and currency). A repeat report for the same competition replaces the old one, so numbers are not double-counted. Figures are self-reported by each site, so treat them as indicative.
+The built-in collector described next is **for the maintainer's own test site only** (it has no site keys and no domain verification); the real collector is the Cloudflare Worker in [`collector-worker/`](collector-worker/). The maintainer's test server can receive them: set `STAGERANK_COLLECTOR=true` and the server accepts `POST /usage` and shows totals to the organiser at `/admin/usage` (sites, competitions, entries, amounts per provider and currency). A repeat report for the same competition replaces the old one, so numbers are not double-counted. Figures are self-reported by each site, so treat them as indicative.

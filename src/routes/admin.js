@@ -419,6 +419,7 @@ router.get('/', requireAdmin, async (req, res, next) => {
       competitions,
       providers: providerStatus(),
       usageRefused: await stats.recentlyRefused(),
+      usageNeedsUrl: stats.needsRealUrl(),
     });
   } catch (err) {
     next(err);
