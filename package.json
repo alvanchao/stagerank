@@ -25,5 +25,13 @@
   },
   "devDependencies": {
     "playwright": "^1.49.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvanchao/stagerank.git"
+  },
+  "homepage": "https://github.com/alvanchao/stagerank#readme",
+  "bugs": {
+    "url": "https://github.com/alvanchao/stagerank/issues"
   }
 }
