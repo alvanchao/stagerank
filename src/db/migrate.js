@@ -40,7 +40,7 @@ export async function truncateAll() {
              usage_reports, voucher_entries, competition_vouchers,
              registration_members, payments, registrations, athletes, entrants,
              divisions, fee_groups, competitions,
-             login_links, app_settings, saved_templates
+             login_links, app_settings, saved_templates, usage_received
     RESTART IDENTITY CASCADE
   `);
 }

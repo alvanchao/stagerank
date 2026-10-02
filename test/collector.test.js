@@ -37,3 +37,41 @@ test('收集端收報告、重複不灌高、壞資料擋掉、合計只給主�
   assert.match(html, /<strong>2<\/strong>/, 'two competitions counted, the repeat replaced');
   assert.match(html, /<strong>17<\/strong>/, '12 + 5 entries');
 });
+
+test('付款成功即送：最新匯總送到收集端、同一場覆蓋不重複 / a successful payment sends the latest summary; same competition replaces', async () => {
+  const { default: cfg } = await import('../src/config.js');
+  const comps = await import('../src/services/competitions.js');
+  const regs = await import('../src/services/registrations.js');
+  const { one, many } = await import('../src/db/index.js');
+  const { makeEntrant } = await import('./helpers.js');
+  cfg.telemetry.enabled = true;
+  cfg.telemetry.endpointOverride = `${http.base}/usage`;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  try {
+    const competition = await comps.createCompetition({ name: 'Pay Cup', feeCents: 1200, status: 'open', currency: 'TWD' });
+    const division = await comps.addDivision({ competitionId: competition.id, name: 'Solo', sortOrder: 1, memberMin: 1, memberMax: 1 });
+    let n = 0;
+    const pay = async () => {
+      n += 1;
+      const me = await makeEntrant({ email: `t${n}@example.com` });
+      await regs.register({ competitionId: competition.id, divisionId: division.id, athleteIds: [me.athletes[0].id], entrantId: me.entrant.id, provider: 'ecpay' });
+      const p = await one("SELECT * FROM payments WHERE status = 'created' ORDER BY id DESC LIMIT 1");
+      const res = await regs.applyPaymentResult({ provider: p.provider, providerOrderId: p.provider_order_id, providerTxnId: `T${p.id}`, paid: true, amountCents: p.amount_cents, raw: {} });
+      assert.equal(res.paid, true);
+    };
+    await pay();
+    await sleep(400);
+    let rows = await many("SELECT payload FROM usage_received WHERE site_url = $1", [cfg.baseUrl]);
+    assert.equal(rows.length, 1, 'first payment reaches the collector');
+    assert.equal(rows[0].payload.competition.entry_count, 1);
+    await pay();
+    await sleep(400);
+    rows = await many("SELECT payload FROM usage_received WHERE site_url = $1", [cfg.baseUrl]);
+    assert.equal(rows.length, 1, 'second payment replaces, not adds');
+    assert.equal(rows[0].payload.competition.entry_count, 2);
+    assert.equal(rows[0].payload.payments[0].count, 2);
+  } finally {
+    cfg.telemetry.enabled = false;
+    cfg.telemetry.endpointOverride = '';
+  }
+});

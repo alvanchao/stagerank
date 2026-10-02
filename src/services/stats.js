@@ -52,6 +52,38 @@ function hashId(value) {
   return (hash >>> 0).toString(16);
 }
 
+// 付款成功後：重新算這場比賽目前的匯總，換掉還沒送出的舊報告（沒有就新增），再在背景試送。
+// 同一場比賽用同一個代號，收集端會覆蓋舊的，所以數字永遠是最新的、不會重複計算。
+// After a payment: recompute this competition's summary, replace any unsent report (or add one), then try to send.
+// The same competition id means the collector overwrites the old figures, so totals are current and never double-counted.
+export async function reportAfterPayment(registrationId) {
+  if (!config.telemetry.enabled) return null;
+  const reg = await one('SELECT competition_id FROM registrations WHERE id = $1', [registrationId]);
+  if (!reg) return null;
+  const competition = await one('SELECT * FROM competitions WHERE id = $1', [reg.competition_id]);
+  const voucher = await one(
+    `SELECT COUNT(*)::int AS entry_count, COALESCE(SUM(amount_cents), 0)::bigint AS total_cents
+     FROM registrations WHERE competition_id = $1 AND status = 'paid'`,
+    [reg.competition_id],
+  );
+  const { rows: byProvider } = await query(
+    `SELECT p.provider, COUNT(*)::int AS count, COALESCE(SUM(p.amount_cents), 0)::bigint AS total_cents,
+            COUNT(*) FILTER (WHERE p.partner_id_sent IS NOT NULL)::int AS with_partner_id
+     FROM payments p JOIN registrations r ON r.id = p.registration_id
+     WHERE r.competition_id = $1 AND p.status = 'paid' GROUP BY p.provider`,
+    [reg.competition_id],
+  );
+  const payload = buildPayload({ competition, byProvider, voucher });
+  const replaced = await one(
+    `UPDATE usage_reports SET payload = $2
+     WHERE id = (SELECT id FROM usage_reports WHERE sent_at IS NULL AND payload->'competition'->>'id_hash' = $1 ORDER BY id DESC LIMIT 1)
+     RETURNING id`,
+    [payload.competition.id_hash, JSON.stringify(payload)],
+  );
+  if (!replaced) await queueReport(payload);
+  return flushReports();
+}
+
 export async function queueReport(payload) {
   if (!config.telemetry.enabled) return null;
   return one('INSERT INTO usage_reports (payload) VALUES ($1) RETURNING *', [JSON.stringify(payload)]);
@@ -111,4 +143,4 @@ export async function flushReports({ fetchImpl = fetch, limit = 20 } = {}) {
   return { sent, failed };
 }
 
-export default { buildPayload, queueReport, resolveEndpoint, flushReports };
+export default { buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };

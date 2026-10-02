@@ -537,7 +537,10 @@ async function settleHandler(req, res, next, { resettle }) {
     // 統計回報排進佇列，送不出去完全不影響比賽。
     // The usage report is queued; a failure to send never affects the competition.
     try {
-      await stats.queueReport(stats.buildPayload({ competition, byProvider, voucher }));
+      const queued = await stats.queueReport(stats.buildPayload({ competition, byProvider, voucher }));
+      // 排進佇列後立刻在背景試送一次；不等結果，失敗就留給每 6 小時的重試。
+      // Right after queueing, try once in the background without waiting; failures wait for the 6-hourly retry.
+      if (queued) stats.flushReports().catch((err) => console.warn('[stats]', err.message));
     } catch (err) {
       console.warn('[stats] could not queue report:', err.message);
     }

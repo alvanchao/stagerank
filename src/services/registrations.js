@@ -225,7 +225,18 @@ export function getPaymentByOrderId(provider, providerOrderId) {
 
 // 收到金流通知：只有驗章通過、金額相符才算付款成功。
 // A provider callback only counts as paid when the signature checks out and the amount matches.
-export async function applyPaymentResult({ provider, providerOrderId, providerTxnId, paid, amountCents, raw }) {
+export async function applyPaymentResult(args) {
+  const result = await applyPaymentResultInner(args);
+  // 付款成功就把這場比賽最新的匿名統計送出去（背景進行，失敗完全不影響付款）。
+  // On a fresh successful payment, send the competition's latest anonymous summary (in the background; never affects the payment).
+  if (result?.paid && !result.alreadyPaid && result.registrationId) {
+    const stats = await import('./stats.js');
+    stats.reportAfterPayment(result.registrationId).catch((err) => console.warn('[stats]', err.message));
+  }
+  return result;
+}
+
+async function applyPaymentResultInner({ provider, providerOrderId, providerTxnId, paid, amountCents, raw }) {
   return withTransaction(async (client) => {
     const { rows: paymentRows } = await client.query(
       'SELECT * FROM payments WHERE provider = $1 AND provider_order_id = $2 FOR UPDATE',
