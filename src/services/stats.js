@@ -28,6 +28,9 @@ export function buildPayload({ competition, byProvider, voucher }) {
     },
     payments: (byProvider || []).map((row) => ({
       provider: row.provider,
+      // 測試還是正式：舊資料沒帶這欄就當成測試，寧可少算也不誤算成真錢。
+      // Test or live: absent means test, so nothing is ever counted as real money by mistake.
+      sandbox: row.sandbox !== false,
       count: Number(row.count),
       total_cents: Number(row.total_cents),
       with_partner_id: Number(row.with_partner_id),
@@ -67,10 +70,10 @@ export async function reportAfterPayment(registrationId) {
     [reg.competition_id],
   );
   const { rows: byProvider } = await query(
-    `SELECT p.provider, COUNT(*)::int AS count, COALESCE(SUM(p.amount_cents), 0)::bigint AS total_cents,
+    `SELECT p.provider, p.sandbox, COUNT(*)::int AS count, COALESCE(SUM(p.amount_cents), 0)::bigint AS total_cents,
             COUNT(*) FILTER (WHERE p.partner_id_sent IS NOT NULL)::int AS with_partner_id
      FROM payments p JOIN registrations r ON r.id = p.registration_id
-     WHERE r.competition_id = $1 AND p.status = 'paid' GROUP BY p.provider`,
+     WHERE r.competition_id = $1 AND p.status = 'paid' GROUP BY p.provider, p.sandbox`,
     [reg.competition_id],
   );
   const payload = buildPayload({ competition, byProvider, voucher });

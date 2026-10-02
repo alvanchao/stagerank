@@ -28,6 +28,7 @@ function validate(body) {
       },
       payments: (Array.isArray(body.payments) ? body.payments.slice(0, 10) : []).map((p) => ({
         provider: String(p.provider || '').slice(0, 20),
+        sandbox: p.sandbox !== false,
         count: num(p.count),
         total_cents: num(p.total_cents),
         with_partner_id: num(p.with_partner_id),
@@ -54,23 +55,32 @@ router.post('/usage', express.json({ limit: '20kb' }), async (req, res) => {
 router.get('/admin/usage', requireStaff, async (req, res, next) => {
   try {
     if (!config.collector.enabled) return res.status(404).end();
+    // 只有「正式」付款的比賽才算進談金流用的合計；測試的另外放。
+    // Only competitions with live payments count towards the headline totals; test ones are listed apart.
     const totals = await many(
       `SELECT COUNT(DISTINCT site_url)::int AS sites, COUNT(*)::int AS competitions,
-              COALESCE(SUM((payload->'competition'->>'entry_count')::int),0)::int AS entries
-       FROM usage_received`,
+              COALESCE(SUM(entry_count), 0)::int AS entries
+       FROM (SELECT site_url, id_hash, (payload->'competition'->>'entry_count')::int AS entry_count
+             FROM usage_received u
+             WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(u.payload->'payments') p
+                           WHERE COALESCE((p->>'sandbox')::boolean, TRUE) = FALSE)) s`,
     );
-    const byProvider = await many(
-      `SELECT p->>'provider' AS provider, SUM((p->>'count')::int)::int AS count,
+    const rowsFor = (live) => many(
+      `SELECT p->>'provider' AS provider, u.payload->'competition'->>'currency' AS currency,
+              SUM((p->>'count')::int)::int AS count,
               SUM((p->>'total_cents')::bigint)::bigint AS total_cents,
               SUM((p->>'with_partner_id')::int)::int AS with_partner_id
-       FROM usage_received, jsonb_array_elements(payload->'payments') p GROUP BY 1 ORDER BY 3 DESC`,
+       FROM usage_received u, jsonb_array_elements(u.payload->'payments') p
+       WHERE (COALESCE((p->>'sandbox')::boolean, TRUE) = FALSE) = $1
+       GROUP BY 1, 2 ORDER BY 1, 2`,
+      [live],
     );
-    const byCurrency = await many(
-      `SELECT payload->'competition'->>'currency' AS currency,
-              SUM((payload->'competition'->>'total_cents')::bigint)::bigint AS total_cents
-       FROM usage_received GROUP BY 1 ORDER BY 2 DESC`,
-    );
-    res.renderPage('admin_usage', { title: res.locals.t('usage.title'), totals: totals[0], byProvider, byCurrency });
+    res.renderPage('admin_usage', {
+      title: res.locals.t('usage.title'),
+      totals: totals[0],
+      liveRows: await rowsFor(true),
+      testRows: await rowsFor(false),
+    });
   } catch (err) { next(err); }
 });
 

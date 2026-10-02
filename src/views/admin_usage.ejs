@@ -1,23 +1,25 @@
 <p class="small"><a href="/admin">&larr; <%= t('usage.back') %></a></p>
 <h1><%= t('usage.title') %></h1>
 <p class="small muted"><%= t('usage.note') %></p>
+<h2><%= t('usage.liveTitle') %></h2>
 <div class="card">
   <p><%= t('usage.sites') %>: <strong><%= totals.sites %></strong></p>
   <p><%= t('usage.competitions') %>: <strong><%= totals.competitions %></strong></p>
   <p><%= t('usage.entries') %>: <strong><%= totals.entries %></strong></p>
 </div>
-<h2><%= t('usage.byProvider') %></h2>
 <table>
-  <tr><th><%= t('usage.provider') %></th><th><%= t('usage.count') %></th><th><%= t('usage.total') %></th><th><%= t('usage.withPartner') %></th></tr>
-  <% byProvider.forEach(function (r) { %>
-    <tr><td><%= r.provider %></td><td><%= r.count %></td><td><%= (Number(r.total_cents) / 100).toLocaleString() %></td><td><%= r.with_partner_id %></td></tr>
+  <tr><th><%= t('usage.provider') %></th><th><%= t('usage.currency') %></th><th><%= t('usage.count') %></th><th><%= t('usage.total') %></th><th><%= t('usage.withPartner') %></th></tr>
+  <% liveRows.forEach(function (r) { %>
+    <tr><td><%= r.provider %></td><td><%= r.currency %></td><td><%= r.count %></td><td><%= money(r.total_cents, r.currency) %></td><td><%= r.with_partner_id %></td></tr>
   <% }); %>
-  <% if (!byProvider.length) { %><tr><td colspan="4" class="muted"><%= t('usage.none') %></td></tr><% } %>
+  <% if (!liveRows.length) { %><tr><td colspan="5" class="muted"><%= t('usage.none') %></td></tr><% } %>
 </table>
-<h2><%= t('usage.byCurrency') %></h2>
+<h2><%= t('usage.testTitle') %></h2>
+<p class="small muted"><%= t('usage.testNote') %></p>
 <table>
-  <tr><th><%= t('usage.currency') %></th><th><%= t('usage.total') %></th></tr>
-  <% byCurrency.forEach(function (r) { %>
-    <tr><td><%= r.currency %></td><td><%= (Number(r.total_cents) / 100).toLocaleString() %></td></tr>
+  <tr><th><%= t('usage.provider') %></th><th><%= t('usage.currency') %></th><th><%= t('usage.count') %></th><th><%= t('usage.total') %></th></tr>
+  <% testRows.forEach(function (r) { %>
+    <tr><td><%= r.provider %></td><td><%= r.currency %></td><td><%= r.count %></td><td><%= money(r.total_cents, r.currency) %></td></tr>
   <% }); %>
+  <% if (!testRows.length) { %><tr><td colspan="4" class="muted"><%= t('usage.none') %></td></tr><% } %>
 </table>

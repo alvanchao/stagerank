@@ -749,13 +749,14 @@
     "sites": "Sites",
     "competitions": "Competitions",
     "entries": "Entries",
-    "byProvider": "By payment provider",
     "provider": "Provider",
     "count": "Count",
     "total": "Amount",
     "none": "No data yet",
-    "byCurrency": "Amount by currency",
     "currency": "Currency",
-    "withPartner": "With partner ID"
+    "withPartner": "With partner ID",
+    "liveTitle": "Live payments (the headline figures)",
+    "testTitle": "Test payments",
+    "testNote": "Sandbox orders, not real money; shown only to confirm the collector works."
   }
 }

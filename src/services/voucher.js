@@ -94,13 +94,13 @@ export async function settle(competitionId, { resettle = false } = {}) {
     // 產生憑證碼的同時順便排一筆統計回報，一場比賽回報一次，數字最完整。
     // Queue one usage report at the same moment: once per competition, when the numbers are complete.
     const { rows: byProvider } = await client.query(
-      `SELECT p.provider,
+      `SELECT p.provider, p.sandbox,
               COUNT(*)::int AS count,
               COALESCE(SUM(p.amount_cents), 0)::bigint AS total_cents,
               COUNT(*) FILTER (WHERE p.partner_id_sent IS NOT NULL)::int AS with_partner_id
        FROM payments p JOIN registrations r ON r.id = p.registration_id
        WHERE r.competition_id = $1 AND p.status = 'paid'
-       GROUP BY p.provider`,
+       GROUP BY p.provider, p.sandbox`,
       [competitionId],
     );
 

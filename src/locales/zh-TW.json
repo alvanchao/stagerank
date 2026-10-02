@@ -749,13 +749,14 @@
     "sites": "站台數",
     "competitions": "比賽場數",
     "entries": "報名人次",
-    "byProvider": "各金流",
     "provider": "金流",
     "count": "筆數",
     "total": "金額",
     "none": "還沒有資料",
-    "byCurrency": "各幣別金額",
     "currency": "幣別",
-    "withPartner": "帶夥伴 ID 的筆數"
+    "withPartner": "帶夥伴 ID 的筆數",
+    "liveTitle": "正式付款（談金流用的數字）",
+    "testTitle": "測試付款",
+    "testNote": "沙盒測試單，不是真錢，只供確認收集端運作。"
   }
 }

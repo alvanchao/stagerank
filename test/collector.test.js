@@ -16,7 +16,10 @@ after(async () => { await http.close(); await closePool(); });
 const report = (hash, count) => ({
   schema: 'stagerank.usage.v1', app: { version: '1' }, site: { url: 'https://a.example' },
   competition: { id_hash: hash, entry_count: count, total_cents: 100000, currency: 'TWD' },
-  payments: [{ provider: 'ecpay', count: 3, total_cents: 90000, with_partner_id: 2 }],
+  payments: [
+    { provider: 'ecpay', sandbox: false, count: 3, total_cents: 90000, with_partner_id: 2 },
+    { provider: 'ecpay', sandbox: true, count: 5, total_cents: 5000, with_partner_id: 0 },
+  ],
 });
 const post = (body) => fetch(`${http.base}/usage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -34,9 +37,11 @@ test('收集端收報告、重複不灌高、壞資料擋掉、合計只給主�
   const page = await fetch(`${http.base}/admin/usage`, { headers: { Cookie: 'stagerank_admin=test-admin-token' } });
   const html = await page.text();
   assert.equal(page.status, 200);
-  assert.match(html, /<strong>2<\/strong>/, 'two competitions counted, the repeat replaced');
+  assert.match(html, /<strong>2<\/strong>/, 'two competitions with live payments, the repeat replaced');
   assert.match(html, /<strong>17<\/strong>/, '12 + 5 entries');
-  assert.match(html, /<td>ecpay<\/td><td>6<\/td><td>1,800<\/td><td>4<\/td>/, 'two reports of 3 payments, 2 with partner id each');
+  assert.match(html, /<td>ecpay<\/td><td>TWD<\/td><td>6<\/td>/, 'live: two reports of 3 payments');
+  assert.match(html, /<td>ecpay<\/td><td>TWD<\/td><td>10<\/td>/, 'test payments listed apart (5 per report)');
+  assert.ok(!/<td>6<\/td><td>[^<]*<\/td><td>[^<]*<\/td><td>6<\/td>/.test(html));
 });
 
 test('付款成功即送：最新匯總送到收集端、同一場覆蓋不重複 / a successful payment sends the latest summary; same competition replaces', async () => {
@@ -71,6 +76,7 @@ test('付款成功即送：最新匯總送到收集端、同一場覆蓋不重�
     assert.equal(rows.length, 1, 'second payment replaces, not adds');
     assert.equal(rows[0].payload.competition.entry_count, 2);
     assert.equal(rows[0].payload.payments[0].count, 2);
+    assert.equal(rows[0].payload.payments[0].sandbox, true, 'sandbox payments are marked as test');
   } finally {
     cfg.telemetry.enabled = false;
     cfg.telemetry.endpointOverride = '';
