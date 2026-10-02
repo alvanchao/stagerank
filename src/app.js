@@ -15,6 +15,7 @@ import staffRoutes from './routes/staff.js';
 import judgeRoutes from './routes/judge.js';
 import manageRoutes from './routes/manage.js';
 import resultsRoutes from './routes/results.js';
+import usageRoutes from './routes/usage.js';
 
 const here = path.dirname(url.fileURLToPath(import.meta.url));
 const viewsDir = path.join(here, 'views');
@@ -96,6 +97,7 @@ export function createApp() {
   app.use('/', judgeRoutes);
   app.use('/', resultsRoutes);
   app.use('/pay', payRoutes);
+  app.use('/', usageRoutes);
   app.use('/admin', manageRoutes);
   app.use('/admin', adminRoutes);
 

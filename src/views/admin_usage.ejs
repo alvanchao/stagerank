@@ -1,0 +1,23 @@
+<p class="small"><a href="/admin">&larr; <%= t('usage.back') %></a></p>
+<h1><%= t('usage.title') %></h1>
+<p class="small muted"><%= t('usage.note') %></p>
+<div class="card">
+  <p><%= t('usage.sites') %>: <strong><%= totals.sites %></strong></p>
+  <p><%= t('usage.competitions') %>: <strong><%= totals.competitions %></strong></p>
+  <p><%= t('usage.entries') %>: <strong><%= totals.entries %></strong></p>
+</div>
+<h2><%= t('usage.byProvider') %></h2>
+<table>
+  <tr><th><%= t('usage.provider') %></th><th><%= t('usage.count') %></th><th><%= t('usage.total') %></th></tr>
+  <% byProvider.forEach(function (r) { %>
+    <tr><td><%= r.provider %></td><td><%= r.count %></td><td><%= (Number(r.total_cents) / 100).toLocaleString() %></td></tr>
+  <% }); %>
+  <% if (!byProvider.length) { %><tr><td colspan="3" class="muted"><%= t('usage.none') %></td></tr><% } %>
+</table>
+<h2><%= t('usage.byCurrency') %></h2>
+<table>
+  <tr><th><%= t('usage.currency') %></th><th><%= t('usage.total') %></th></tr>
+  <% byCurrency.forEach(function (r) { %>
+    <tr><td><%= r.currency %></td><td><%= (Number(r.total_cents) / 100).toLocaleString() %></td></tr>
+  <% }); %>
+</table>

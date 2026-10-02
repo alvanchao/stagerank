@@ -286,7 +286,9 @@
       "mark": "勾選（Mark）",
       "score": "打分（Score）",
       "rank": "排名（Rank）"
-    }
+    },
+    "roundOrder": "順序",
+    "roundOrderHint": "留空就排在最後"
   },
   "judges": {
     "title": "裁判",
@@ -739,5 +741,20 @@
       "subject": "{site} 登入驗證碼",
       "body": "您好，\n\n您的 {site} 登入驗證碼是：\n\n{code}\n\n{minutes} 分鐘內有效，只能使用一次。如果不是您本人操作，請直接忽略這封信，也不要把驗證碼告訴任何人。"
     }
+  },
+  "usage": {
+    "title": "使用統計（收集端）",
+    "back": "主辦後台",
+    "note": "這些數字是各站台自己回報的匿名統計，不含選手資料；同一場比賽重複回報只算一次。",
+    "sites": "站台數",
+    "competitions": "比賽場數",
+    "entries": "報名人次",
+    "byProvider": "各金流",
+    "provider": "金流",
+    "count": "筆數",
+    "total": "金額",
+    "none": "還沒有資料",
+    "byCurrency": "各幣別金額",
+    "currency": "幣別"
   }
 }

@@ -137,6 +137,12 @@ export const config = {
     endpointOverride: str(env.STAGERANK_TELEMETRY_ENDPOINT, ''),
   },
 
+  // 收集端：預設關閉。只有專案維護者的那一台伺服器需要打開，用來接收各主辦送來的匿名統計。
+  // Collector: off by default. Only the maintainer's own server turns it on, to receive anonymous reports.
+  collector: {
+    enabled: bool(env.STAGERANK_COLLECTOR, false),
+  },
+
   payments: {
     // 夥伴 ID 每天去專案設定檔看一次。關掉就只用寫死的值和主辦自己填的。
     // Partner ids are read from the project's config file once a day. Off, only the built-in

@@ -286,7 +286,9 @@
       "mark": "Mark (call-back)",
       "score": "Score",
       "rank": "Rank"
-    }
+    },
+    "roundOrder": "Order",
+    "roundOrderHint": "Leave blank to put it last"
   },
   "judges": {
     "title": "Judges",
@@ -739,5 +741,20 @@
       "subject": "{site} sign-in code",
       "body": "Hello,\n\nYour {site} sign-in code is:\n\n{code}\n\nIt is good for {minutes} minutes and works once. If this was not you, ignore this mail and never share the code."
     }
+  },
+  "usage": {
+    "title": "Usage statistics (collector)",
+    "back": "Organiser dashboard",
+    "note": "These are anonymous figures reported by each site, with no competitor data; repeat reports for one competition count once.",
+    "sites": "Sites",
+    "competitions": "Competitions",
+    "entries": "Entries",
+    "byProvider": "By payment provider",
+    "provider": "Provider",
+    "count": "Count",
+    "total": "Amount",
+    "none": "No data yet",
+    "byCurrency": "Amount by currency",
+    "currency": "Currency"
   }
 }

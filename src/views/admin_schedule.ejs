@@ -89,6 +89,8 @@
     <form method="post" action="/admin/c/<%= competition.id %>/division/<%= block.division.id %>/round" style="margin-top:16px">
       <label for="rn-<%= block.division.id %>"><%= t('schedule.round') %></label>
       <input id="rn-<%= block.division.id %>" type="text" name="name" required placeholder="<%= t('schedule.roundNameExample') %>">
+      <label for="ro-<%= block.division.id %>"><%= t('schedule.roundOrder') %></label>
+      <input id="ro-<%= block.division.id %>" type="text" name="sortOrder" inputmode="numeric" placeholder="<%= t('schedule.roundOrderHint') %>">
       <label><%= t('schedule.scoringMode') %></label>
       <select name="scoringMode">
         <option value="mark"><%= t('schedule.mode.mark') %></option>
