@@ -49,6 +49,28 @@ export async function markQuota({ round, danceId, judgeId, heatId }) {
 
 // ---------------------------------------------------------------- 送出 / submitting
 
+// 覆蓋舊分數之前，把舊的留一份到 score_history（值有變才留）。
+// Before an existing score is overwritten or removed, keep the old values in score_history (only when something changes).
+async function keepOldScore(client, roundId, danceId, judgeId, entryId, next, kind = 'changed') {
+  const { rows } = await client.query(
+    'SELECT * FROM scores WHERE round_id=$1 AND dance_id=$2 AND judge_id=$3 AND round_entry_id=$4',
+    [roundId, danceId, judgeId, entryId],
+  );
+  const old = rows[0];
+  if (!old) return;
+  const same = kind === 'changed'
+    && (old.marked ?? null) === (next.marked ?? null)
+    && (old.points === null ? null : Number(old.points)) === (next.points ?? null)
+    && (old.rank_position ?? null) === (next.rank ?? null);
+  if (same) return;
+  await client.query(
+    `INSERT INTO score_history (round_id, dance_id, heat_id, judge_id, round_entry_id, marked, points, rank_position, auto_collected, submitted_at, change_kind)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [roundId, danceId, old.heat_id, judgeId, entryId, old.marked, old.points, old.rank_position, old.auto_collected, old.submitted_at, kind],
+  );
+}
+
+
 // 裁判送出。只有「已檢錄、未缺席、而且屬於這位裁判負責的組別」的選手才收得進來。
 // A judge submits. Only checked-in, present competitors from divisions this judge covers are accepted.
 export async function submitScores(heatId, judgeId, payload, { auto = false } = {}) {
@@ -120,6 +142,7 @@ export async function submitScores(heatId, judgeId, payload, { auto = false } = 
           // 沒勾就是沒給，不必存一筆，但自動收件時要留紀錄以便對帳。
           // Not ticked means nothing given; only the auto-collect pass records it for the audit trail.
           if (!auto) {
+            await keepOldScore(client, round.id, heat.dance_id, judgeId, entry.round_entry_id, {}, 'removed');
             await client.query(
               'DELETE FROM scores WHERE round_id=$1 AND dance_id=$2 AND judge_id=$3 AND round_entry_id=$4',
               [round.id, heat.dance_id, judgeId, entry.round_entry_id],
@@ -146,6 +169,7 @@ export async function submitScores(heatId, judgeId, payload, { auto = false } = 
         if (!Number.isFinite(rankValue) || rankValue < 1) throw new ScoringError('scoring.errors.badRank');
       }
 
+      await keepOldScore(client, round.id, heat.dance_id, judgeId, entry.round_entry_id, { marked, points: pointValue, rank: rankValue });
       await client.query(
         `INSERT INTO scores (round_id, dance_id, heat_id, judge_id, round_entry_id, marked, points, rank_position, auto_collected)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)

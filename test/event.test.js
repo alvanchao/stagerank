@@ -280,3 +280,23 @@ test('Excel 匯出：背號表與賽序表能開、內容與畫面一致、只�
   assert.doesNotMatch(judge.headers.get('content-type') || '', /spreadsheetml/);
 });
 const XLSX_TYPE_CHECK = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+test('改分歷史：重新送出會把舊分數留下來 / a resubmission keeps the overwritten score in score_history', async () => {
+  const ev = await buildEvent();
+  const [h1] = ev.chaHeats;
+  const { entries: heatEntries } = await schedule.heatWithEntries(h1.id);
+  for (const e of heatEntries) await floor.checkIn(e.id);
+  await floor.nextHeat(ev.competition.id, { heatId: h1.id });
+  await floor.startHeat(h1.id);
+  const judge = ev.latinJudges[0];
+  const entries = await judgeService.heatEntriesForJudge(h1.id, judge.id);
+  const ids = entries.map((e) => e.round_entry_id);
+  await scoring.submitScores(h1.id, judge.id, { marks: ids.slice(0, 2) });
+  assert.equal((await many('SELECT 1 FROM score_history')).length, 0, 'first submission leaves no history');
+  await scoring.submitScores(h1.id, judge.id, { marks: ids.slice(0, 2) });
+  assert.equal((await many('SELECT 1 FROM score_history')).length, 0, 'identical resubmission leaves no history');
+  await scoring.submitScores(h1.id, judge.id, { marks: ids.slice(1, 3) });
+  const hist = await many('SELECT * FROM score_history ORDER BY id');
+  assert.ok(hist.length >= 1, 'a changed resubmission is recorded');
+  assert.ok(hist.some((h) => h.change_kind === 'removed'), 'the dropped mark is recorded as removed');
+});
