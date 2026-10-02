@@ -139,6 +139,8 @@ export const config = {
     // Only these hosts may receive reports: an endpoint read from the GitHub config must be https and listed here.
     // The list lives in the code, so a changed or mistyped config file can never send site keys elsewhere.
     // Fill in the Worker's host name here once the real collector exists.
+    // 項目可以是完整主機名，或 '*.帳號.workers.dev'（結尾比對）。
+    // An entry is a full host name or '*.account.workers.dev' (suffix match).
     allowedHosts: [],
     // 回報網址不寫死：先讀 GitHub 上的設定檔，換帳號時舊版也跟著改。
     // The endpoint is not hard-coded: it is read from a config file on GitHub so old installs follow a move.

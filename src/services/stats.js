@@ -120,12 +120,35 @@ export async function reportAfterPayment(registrationId) {
 // Can this site's URL be counted? It must be a real https host. localhost, IP addresses and dotless hosts are
 // not reported, because the collector would refuse them and the report would be retried for 14 days for nothing.
 // (A maintainer who points reports at a test collector with the endpoint variable is exempt.)
+const RESERVED_SUFFIXES = ['.local', '.localhost', '.test', '.internal', '.example', '.invalid', '.lan'];
+const isLoopback = (host) => host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+
+// 維護者自己指定的測試收集端：必須是 https，只有本機（localhost、127.0.0.1）可以用 http。
+// A maintainer's own test collector must be https; only loopback may be plain http.
+function overrideAllowed() {
+  let url;
+  try { url = new URL(config.telemetry.endpointOverride); } catch { return false; }
+  return url.protocol === 'https:' || (url.protocol === 'http:' && isLoopback(url.hostname));
+}
+
+// 允許的收集端主機：寫死在程式裡的名單。名單項目可以是完整主機名，或 "*.帳號.workers.dev" 這種結尾比對
+// （前面一定要有點，所以 evilacct.workers.dev 不會被 *.acct.workers.dev 放行）。
+// Allowed collector hosts live in the code. An entry is a full host name or a "*.account.workers.dev" suffix
+// match (the dot is part of the match, so evilacct.workers.dev never passes for *.acct.workers.dev).
+export function hostAllowed(hostname) {
+  return config.telemetry.allowedHosts.some((entry) => (entry.startsWith('*.')
+    ? hostname.length > entry.length - 1 && hostname.endsWith(entry.slice(1))
+    : hostname === entry));
+}
+
 export function reportable() {
-  if (config.telemetry.endpointOverride) return true;
+  if (config.telemetry.endpointOverride) return overrideAllowed();
   let url;
   try { url = new URL(config.baseUrl); } catch { return false; }
   const host = url.hostname;
-  return url.protocol === 'https:' && host.includes('.') && !/^[\d.]+$/.test(host) && !host.includes(':');
+  if (url.protocol !== 'https:' || url.port !== '') return false;
+  if (!host.includes('.') || /^[\d.]+$/.test(host) || host.includes(':')) return false;
+  return !RESERVED_SUFFIXES.some((suffix) => host.endsWith(suffix));
 }
 
 export function needsRealUrl() {
@@ -138,7 +161,10 @@ export async function queueReport(payload) {
 }
 
 export async function resolveEndpoint({ fetchImpl = fetch } = {}) {
-  if (config.telemetry.endpointOverride) return config.telemetry.endpointOverride;
+  if (config.telemetry.endpointOverride) {
+    if (!overrideAllowed()) throw new Error('telemetry endpoint override must be https');
+    return config.telemetry.endpointOverride;
+  }
   const response = await fetchImpl(config.telemetry.configUrl, { redirect: 'follow' });
   if (!response.ok) throw new Error(`telemetry config ${response.status}`);
   const json = await response.json();
@@ -147,7 +173,7 @@ export async function resolveEndpoint({ fetchImpl = fetch } = {}) {
   // The config file may only point at a collector host that is hard-coded here, and only over https.
   let url;
   try { url = new URL(json.endpoint); } catch { throw new Error('telemetry endpoint is not a URL'); }
-  if (url.protocol !== 'https:' || !config.telemetry.allowedHosts.includes(url.hostname)) {
+  if (url.protocol !== 'https:' || url.port !== '' || !hostAllowed(url.hostname)) {
     throw new Error('telemetry endpoint is not an allowed collector');
   }
   return json.endpoint;
@@ -217,4 +243,4 @@ export async function recentlyRefused() {
   return row.n > 0;
 }
 
-export default { reportable, needsRealUrl, getSiteKey, siteKeyHash, recentlyRefused, buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };
+export default { reportable, hostAllowed, needsRealUrl, getSiteKey, siteKeyHash, recentlyRefused, buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };

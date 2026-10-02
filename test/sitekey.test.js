@@ -123,7 +123,7 @@ test('並行第一次產生也拿到同一把金鑰 / two concurrent first calls
 });
 
 test('抓不到回報網址時，失敗原因有記下來 / when the endpoint cannot be read, the reason is recorded', async () => {
-  await withConfig({ baseUrl: 'https://site.example' }, async () => {
+  await withConfig({ baseUrl: 'https://stage.dance-club.org' }, async () => {
     await query('DELETE FROM usage_reports');
     await stats.queueReport(payloadOf('abcdef21'));
     const result = await stats.flushReports({ fetchImpl: async () => ({ ok: false, status: 500 }) });
@@ -147,7 +147,7 @@ test('設定檔只能指到寫死的 https 收集端 / the config file may only 
 });
 
 test('被拒的收集端網址不會收到任何金鑰 / a refused endpoint never receives the key', async () => {
-  await withConfig({ baseUrl: 'https://site.example', hosts: ['collector.example'] }, async () => {
+  await withConfig({ baseUrl: 'https://stage.dance-club.org', hosts: ['collector.example'] }, async () => {
     await query('DELETE FROM usage_reports');
     await stats.queueReport(payloadOf('abcdef22'));
     let posted = 0;
@@ -163,7 +163,7 @@ test('被拒的收集端網址不會收到任何金鑰 / a refused endpoint neve
 });
 
 test('送出時不跟隨轉址 / the POST never follows redirects', async () => {
-  await withConfig({ override: 'https://collector.invalid/usage', baseUrl: 'https://site.example' }, async () => {
+  await withConfig({ override: 'https://collector.invalid/usage', baseUrl: 'https://stage.dance-club.org' }, async () => {
     await query('DELETE FROM usage_reports');
     await stats.queueReport(payloadOf('abcdef23'));
     let init = null;
@@ -175,7 +175,7 @@ test('送出時不跟隨轉址 / the POST never follows redirects', async () => 
 test('沒有正式網址就不回報 / nothing is reported until BASE_URL is a real https address', async () => {
   const cases = [
     ['http://localhost:3000', false], ['https://localhost', false], ['https://127.0.0.1', false],
-    ['http://site.example', false], ['https://[::1]', false], ['https://site.example', true], ['https://a.b.example', true],
+    ['http://stage.dance-club.org', false], ['https://[::1]', false], ['https://stage.dance-club.org', true], ['https://a.b.dance-club.org', true],
   ];
   for (const [baseUrl, expected] of cases) {
     await withConfig({ baseUrl }, async () => assert.equal(stats.reportable(), expected, baseUrl));
@@ -195,8 +195,43 @@ test('沒設正式網址時後台有提示 / the dashboard says so while BASE_UR
     const page = await fetch(`${http.base}/admin`, { headers: { Cookie: 'stagerank_admin=test-admin-token' } });
     assert.match(await page.text(), /BASE_URL/);
   });
-  await withConfig({ baseUrl: 'https://site.example' }, async () => {
+  await withConfig({ baseUrl: 'https://stage.dance-club.org' }, async () => {
     const page = await fetch(`${http.base}/admin`, { headers: { Cookie: 'stagerank_admin=test-admin-token' } });
     assert.ok(!(await page.text()).includes('BASE_URL 必須'));
   });
+});
+
+test('保留網域與帶埠號的網址不回報 / reserved domains and URLs with a port are not reported', async () => {
+  for (const baseUrl of ['https://stagerank.local', 'https://x.localhost', 'https://x.test', 'https://x.internal',
+    'https://x.example', 'https://x.invalid', 'https://stage.dance-club.org:8443', 'https://printer.lan']) {
+    await withConfig({ baseUrl }, async () => assert.equal(stats.reportable(), false, baseUrl));
+  }
+});
+
+test('收集端名單可用 *.帳號.workers.dev 結尾比對，且比對要精確 / suffix entries match precisely', async () => {
+  await withConfig({ hosts: ['*.acct.workers.dev', 'collector.example.org'] }, async () => {
+    for (const ok of ['stagerank-usage.acct.workers.dev', 'a.b.acct.workers.dev', 'collector.example.org']) {
+      assert.equal(stats.hostAllowed(ok), true, ok);
+    }
+    for (const bad of ['acct.workers.dev', 'x.evilacct.workers.dev', 'acct.workers.dev.evil.com', 'evil.org', 'x.collector.example.org']) {
+      assert.equal(stats.hostAllowed(bad), false, bad);
+    }
+    assert.equal(await stats.resolveEndpoint({ fetchImpl: configFetch('https://stagerank-usage.acct.workers.dev/usage') }), 'https://stagerank-usage.acct.workers.dev/usage');
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('https://stagerank-usage.acct.workers.dev:8443/usage') }), /not an allowed collector/);
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('https://collector.example.org@evil.com/usage') }), /not an allowed collector/);
+    await assert.rejects(stats.resolveEndpoint({ fetchImpl: configFetch('https://evil.com/#@collector.example.org') }), /not an allowed collector/);
+  });
+});
+
+test('測試收集端也必須是 https（本機例外）/ a test collector must be https unless it is loopback', async () => {
+  await withConfig({ override: 'http://collector.example.org/usage' }, async () => {
+    assert.equal(stats.reportable(), false);
+    await assert.rejects(stats.resolveEndpoint({}), /must be https/);
+  });
+  for (const ok of ['https://collector.invalid/usage', 'http://127.0.0.1:4000/usage', 'http://localhost:4000/usage']) {
+    await withConfig({ override: ok }, async () => {
+      assert.equal(stats.reportable(), true, ok);
+      assert.equal(await stats.resolveEndpoint({}), ok);
+    });
+  }
 });
