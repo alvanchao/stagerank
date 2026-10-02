@@ -755,6 +755,7 @@
     "total": "Amount",
     "none": "No data yet",
     "byCurrency": "Amount by currency",
-    "currency": "Currency"
+    "currency": "Currency",
+    "withPartner": "With partner ID"
   }
 }

@@ -16,7 +16,7 @@ after(async () => { await http.close(); await closePool(); });
 const report = (hash, count) => ({
   schema: 'stagerank.usage.v1', app: { version: '1' }, site: { url: 'https://a.example' },
   competition: { id_hash: hash, entry_count: count, total_cents: 100000, currency: 'TWD' },
-  payments: [{ provider: 'ecpay', count: 3, total_cents: 90000, with_partner_id: 0 }],
+  payments: [{ provider: 'ecpay', count: 3, total_cents: 90000, with_partner_id: 2 }],
 });
 const post = (body) => fetch(`${http.base}/usage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -36,6 +36,7 @@ test('收集端收報告、重複不灌高、壞資料擋掉、合計只給主�
   assert.equal(page.status, 200);
   assert.match(html, /<strong>2<\/strong>/, 'two competitions counted, the repeat replaced');
   assert.match(html, /<strong>17<\/strong>/, '12 + 5 entries');
+  assert.match(html, /<td>ecpay<\/td><td>6<\/td><td>1,800<\/td><td>4<\/td>/, 'two reports of 3 payments, 2 with partner id each');
 });
 
 test('付款成功即送：最新匯總送到收集端、同一場覆蓋不重複 / a successful payment sends the latest summary; same competition replaces', async () => {

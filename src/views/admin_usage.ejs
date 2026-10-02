@@ -8,11 +8,11 @@
 </div>
 <h2><%= t('usage.byProvider') %></h2>
 <table>
-  <tr><th><%= t('usage.provider') %></th><th><%= t('usage.count') %></th><th><%= t('usage.total') %></th></tr>
+  <tr><th><%= t('usage.provider') %></th><th><%= t('usage.count') %></th><th><%= t('usage.total') %></th><th><%= t('usage.withPartner') %></th></tr>
   <% byProvider.forEach(function (r) { %>
-    <tr><td><%= r.provider %></td><td><%= r.count %></td><td><%= (Number(r.total_cents) / 100).toLocaleString() %></td></tr>
+    <tr><td><%= r.provider %></td><td><%= r.count %></td><td><%= (Number(r.total_cents) / 100).toLocaleString() %></td><td><%= r.with_partner_id %></td></tr>
   <% }); %>
-  <% if (!byProvider.length) { %><tr><td colspan="3" class="muted"><%= t('usage.none') %></td></tr><% } %>
+  <% if (!byProvider.length) { %><tr><td colspan="4" class="muted"><%= t('usage.none') %></td></tr><% } %>
 </table>
 <h2><%= t('usage.byCurrency') %></h2>
 <table>

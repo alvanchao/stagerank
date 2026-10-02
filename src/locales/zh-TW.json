@@ -755,6 +755,7 @@
     "total": "金額",
     "none": "還沒有資料",
     "byCurrency": "各幣別金額",
-    "currency": "幣別"
+    "currency": "幣別",
+    "withPartner": "帶夥伴 ID 的筆數"
   }
 }
