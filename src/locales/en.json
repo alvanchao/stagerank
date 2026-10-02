@@ -227,7 +227,8 @@
     "googleMockWarn": "Pretend-Google test mode: any listed email signs in. For development and tests only.",
     "googleMockTitle": "Pretend Google sign-in (test)",
     "googleMockEmail": "Email",
-    "googleNotListed": "This email is not on the organiser list."
+    "googleNotListed": "This email is not on the organiser list.",
+    "usageRefused": "Usage statistics were not accepted: this site's URL may already be claimed, or the collector could not read the proof file (/.well-known/stagerank-usage.json). Competitions are not affected; please contact the project maintainer."
   },
   "errors": {
     "notFound": "Page not found",

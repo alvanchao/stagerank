@@ -1,0 +1,15 @@
+# 範例設定。database_id 在你自己建好 D1 之後才填，不要提交真實的 id。
+# Example config. Fill in database_id after you create your own D1; never commit a real id.
+name = "stagerank-usage"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stagerank-usage"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
+
+[vars]
+LIMIT_IP_PER_MIN = "30"
+LIMIT_SITE_PER_HOUR = "20"
+LIMIT_GLOBAL_PER_DAY = "5000"

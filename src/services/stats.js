@@ -2,16 +2,43 @@
 // Anonymous usage reporting.
 //
 // 回報的內容：網址、各家金流的交易筆數與金額、比賽場數、夥伴 ID 是否完整。
-// 絕對不含選手個資，也絕對不含金鑰。這個功能在說明文件裡公開寫明。
+// 絕對不含選手個資，也絕對不含金流金鑰。唯一的例外是「網站金鑰」：一把只用來證明這個網站是它自己的隨機碼，
+// 收集端只存它的雜湊。這個功能在說明文件裡公開寫明。
 // What is sent: the site URL, per-provider payment counts and totals, competition count, and whether the
-// partner IDs are intact. Never any competitor data, never any keys. This is documented publicly.
+// partner IDs are intact. Never any competitor data, never any payment keys. The one exception is the site key:
+// a random code that only proves this site owns its URL; the collector stores just its hash. Documented publicly.
 //
 // 回報網址不寫死：先讀 GitHub 上的設定檔，日後換帳號時舊版也會跟著改。
 // The endpoint is not hard-coded: it is read from a config file on GitHub so old installs follow a move.
 
+import { createHash, randomBytes } from 'node:crypto';
 import { one, query } from '../db/index.js';
 import config from '../config.js';
 import { providerStatus } from '../payments/index.js';
+
+// 回報最多重試幾天，超過就放棄，避免壞掉的網站無限重送。
+// How many days a report is retried before it is given up on, so a broken site never resends forever.
+export const REPORT_RETRY_DAYS = 14;
+const SITE_KEY_SETTING = 'usage.site_key';
+
+// 網站金鑰：第一次用到時產生（24 位元組，base64url，約 192 bits），只存在這個網站自己的資料庫。
+// Site key: generated on first use (24 bytes, base64url, ~192 bits) and kept only in this site's own database.
+export async function getSiteKey() {
+  const found = await one('SELECT value FROM app_settings WHERE key = $1', [SITE_KEY_SETTING]);
+  if (found?.value) return found.value;
+  const fresh = randomBytes(24).toString('base64url');
+  await query(
+    `INSERT INTO app_settings (key, value, updated_at) VALUES ($1, to_jsonb($2::text), now())
+     ON CONFLICT (key) DO NOTHING`,
+    [SITE_KEY_SETTING, fresh],
+  );
+  const row = await one('SELECT value FROM app_settings WHERE key = $1', [SITE_KEY_SETTING]);
+  return row.value;
+}
+
+export async function siteKeyHash() {
+  return createHash('sha256').update(await getSiteKey()).digest('hex');
+}
 
 export function buildPayload({ competition, byProvider, voucher }) {
   return {
@@ -107,8 +134,10 @@ export async function flushReports({ fetchImpl = fetch, limit = 20 } = {}) {
   if (!config.telemetry.enabled) return { sent: 0, failed: 0, skipped: true };
 
   const { rows } = await query(
-    'SELECT * FROM usage_reports WHERE sent_at IS NULL ORDER BY created_at LIMIT $1',
-    [limit],
+    `SELECT * FROM usage_reports
+     WHERE sent_at IS NULL AND created_at > now() - make_interval(days => $2)
+     ORDER BY created_at LIMIT $1`,
+    [limit, REPORT_RETRY_DAYS],
   );
   if (rows.length === 0) return { sent: 0, failed: 0 };
 
@@ -123,14 +152,18 @@ export async function flushReports({ fetchImpl = fetch, limit = 20 } = {}) {
     return { sent: 0, failed: rows.length, error: err.message };
   }
 
+  const siteKey = await getSiteKey();
   let sent = 0;
   let failed = 0;
   for (const row of rows) {
     try {
+      // 網站金鑰只在送出的當下加上去，不存進待送的紀錄裡。
+      // The site key is attached only at send time and never stored with the queued report.
+      const body = { ...row.payload, site: { ...row.payload.site, key: siteKey } };
       const response = await fetchImpl(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(row.payload),
+        body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       await query('UPDATE usage_reports SET sent_at = now(), attempts = attempts + 1 WHERE id = $1', [row.id]);
@@ -146,4 +179,15 @@ export async function flushReports({ fetchImpl = fetch, limit = 20 } = {}) {
   return { sent, failed };
 }
 
-export default { buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };
+// 後台提示用：最近有沒有被收集端用 403 拒絕（網址可能被認領了，或驗證檔讀不到）。
+// For the admin notice: was a recent report refused with 403 (URL possibly claimed, or the proof file unreadable)?
+export async function recentlyRefused() {
+  const row = await one(
+    `SELECT COUNT(*)::int AS n FROM usage_reports
+     WHERE sent_at IS NULL AND last_error = 'HTTP 403' AND created_at > now() - make_interval(days => $1)`,
+    [REPORT_RETRY_DAYS],
+  );
+  return row.n > 0;
+}
+
+export default { getSiteKey, siteKeyHash, recentlyRefused, buildPayload, reportAfterPayment, queueReport, resolveEndpoint, flushReports };

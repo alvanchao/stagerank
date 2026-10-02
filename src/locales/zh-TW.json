@@ -227,7 +227,8 @@
     "googleMockWarn": "目前是「假 Google」測試模式：輸入名單內的信箱就能登入，只能用在開發與測試。",
     "googleMockTitle": "假 Google 登入（測試）",
     "googleMockEmail": "信箱",
-    "googleNotListed": "這個信箱不在主辦名單內。"
+    "googleNotListed": "這個信箱不在主辦名單內。",
+    "usageRefused": "使用統計沒有送出去：這個網站的網址可能已被別人認領，或收集端讀不到驗證檔（/.well-known/stagerank-usage.json）。比賽不受影響，請聯絡專案維護者。"
   },
   "errors": {
     "notFound": "找不到這個頁面",

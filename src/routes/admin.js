@@ -418,6 +418,7 @@ router.get('/', requireAdmin, async (req, res, next) => {
       title: res.locals.t('admin.title'),
       competitions,
       providers: providerStatus(),
+      usageRefused: await stats.recentlyRefused(),
     });
   } catch (err) {
     next(err);

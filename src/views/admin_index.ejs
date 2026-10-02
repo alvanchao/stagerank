@@ -1,4 +1,7 @@
 <h1><%= t('admin.title') %></h1>
+<% if (typeof usageRefused !== 'undefined' && usageRefused) { %>
+<div class="notice" role="alert"><%= t('admin.usageRefused') %></div>
+<% } %>
 <p class="small"><a href="/admin/entrants"><%= t('admin.entrants') %></a></p>
 
 <div class="card">

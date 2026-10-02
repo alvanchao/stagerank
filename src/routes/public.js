@@ -6,6 +6,7 @@ import * as feeGroups from '../services/feeGroups.js';
 import * as payments from '../payments/index.js';
 import * as onlinePay from '../services/onlinePay.js';
 import { adminFromCookie } from '../middleware/auth.js';
+import * as stats from '../services/stats.js';
 
 const router = express.Router();
 
@@ -180,6 +181,17 @@ router.get('/r/:id', async (req, res, next) => {
 // Health check for Docker and hosting platforms.
 router.get('/healthz', (req, res) => {
   res.json({ ok: true, app: 'StageRank', version: '0.1.0' });
+});
+
+// 證明這個網站擁有自己的網址：只放網站金鑰的雜湊，不轉址。收集端第一次認領時會來讀。
+// Proof that this site owns its URL: only the hash of the site key, never a redirect. The collector reads it on first claim.
+router.get('/.well-known/stagerank-usage.json', async (req, res, next) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json({ key_hash: await stats.siteKeyHash() });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

@@ -248,6 +248,8 @@ Honest list, so nobody is surprised:
 
 ## Usage statistics and the collector
 
-Each install sends a small anonymous summary right after every successful online payment (and again when the organiser closes registration), containing (competition count, entry count, per-provider payment counts and totals, whether partner IDs are intact). It never contains competitor names, emails or any key, and an organiser can switch it off with `STAGERANK_REPORT_USAGE=false`. Where reports go is read from `telemetry.json` in this repository.
+Each install sends a small anonymous summary right after every successful online payment (and again when the organiser closes registration), containing (competition count, entry count, per-provider payment counts and totals, whether partner IDs are intact). It never contains competitor names, emails or any payment key, and an organiser can switch it off with `STAGERANK_REPORT_USAGE=false`. Where reports go is read from `telemetry.json` in this repository.
+
+Each install makes one random **site key** the first time it reports and keeps it in its own database. The report carries that key so a collector can tell later reports from the same site; the site also publishes only the key's hash at `/.well-known/stagerank-usage.json`, which a collector can read once to check that the site really owns its URL. Reports that cannot be delivered are retried for up to 14 days and then dropped, and if the collector refuses one with 403 the organiser dashboard shows a notice. None of this affects a competition.
 
 The maintainer's own server can receive them: set `STAGERANK_COLLECTOR=true` and the server accepts `POST /usage` and shows totals to the organiser at `/admin/usage` (sites, competitions, entries, amounts per provider and currency). A repeat report for the same competition replaces the old one, so numbers are not double-counted. Figures are self-reported by each site, so treat them as indicative.
