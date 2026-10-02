@@ -141,9 +141,9 @@ export const config = {
     // Fill in the Worker's host name here once the real collector exists.
     // 項目可以是完整主機名，或 '*.帳號.workers.dev'（結尾比對）。
     // An entry is a full host name or '*.account.workers.dev' (suffix match).
-    allowedHosts: [],
-    // 回報網址不寫死：先讀 GitHub 上的設定檔，換帳號時舊版也跟著改。
-    // The endpoint is not hard-coded: it is read from a config file on GitHub so old installs follow a move.
+    allowedHosts: ['stagerank-usage.alvanchao.workers.dev'],
+    // 回報網址讀 GitHub 上的設定檔，但只能在上面 allowedHosts 名單內移動；名單外要發新版。
+    // The endpoint is read from a config file on GitHub, but can only move within allowedHosts above; a host outside it needs a new release.
     configUrl: str(
       env.STAGERANK_TELEMETRY_CONFIG_URL,
       'https://raw.githubusercontent.com/alvanchao/stagerank/main/telemetry.json',

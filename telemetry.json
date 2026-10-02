@@ -1,8 +1,8 @@
 {
-  "_comment": "StageRank reads this file to find where to send anonymous usage reports. Installed copies follow changes made here, so the endpoint can move without asking anyone to update.",
-  "endpoint": "https://stagerank.example.invalid/usage",
+  "_comment": "StageRank reads this file to find where to send anonymous usage reports. The endpoint can change here, but only to a host that is also listed in allowedHosts in src/config.js; any other host needs a new release.",
+  "endpoint": "https://stagerank-usage.alvanchao.workers.dev/",
   "schema": "stagerank.usage.v1",
-  "note": "Not live yet. Until a real endpoint is published here, reports are queued locally and never leave the organiser's server.",
+  "note": "Live. Reports go to the collector Worker on Cloudflare (see collector-worker/). A report only leaves a server if the host is also listed in allowedHosts.",
   "partner_ids": {
     "_comment": "The partner ids every installed copy carries on its payment requests. Blank until a contract exists with that provider; an organiser can override any of these with the STAGERANK_*_ID environment variables, and their value always wins.",
     "ecpayPlatformId": "",
