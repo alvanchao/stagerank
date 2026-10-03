@@ -52,3 +52,6 @@ Optional, deployed by the maintainer. Organisers running their own StageRank do 
 需要 Node 22.5 以上（測試用 `node:sqlite` 模擬 D1）。 / Needs Node 22.5+ (the tests use `node:sqlite` to stand in for D1).
 
     node --test --no-warnings collector-worker/test/worker.test.js
+
+## Stats page (owner only)
+`GET /stats` shows totals and the latest reports behind HTTP Basic auth (any username, the password is the `STATS_PASSWORD` secret, at least 16 characters). Without that secret the path is a 404. Ten wrong attempts from one IP block it for five minutes. The page shows no personal data, only site origins, counts and totals.

@@ -160,9 +160,83 @@ async function sweepRateLimit(db, now) {
     .run();
 }
 
+// ---- 統計頁（只有董事長用，Basic 密碼）/ stats page (owner only, Basic auth) ----
+// 沒設 STATS_PASSWORD 這個頁面就不存在（404）。密碼只放在 Cloudflare 變數，不在程式裡。
+// Without a STATS_PASSWORD variable the page does not exist (404). The password lives only in a Cloudflare variable.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const STATS_FAILS = 10;
+const STATS_WINDOW = 300;
+
+async function statsAuthorised(request, env, db, now) {
+  const header = request.headers.get('authorization') || '';
+  if (!header.startsWith('Basic ')) return false;
+  let supplied = '';
+  try {
+    const decoded = atob(header.slice(6));
+    supplied = decoded.slice(decoded.indexOf(':') + 1);
+  } catch { return false; }
+  // 兩邊先雜湊再比，避免長度與逐字比對洩漏。 / Hash both sides first so length and char-by-char timing leak nothing.
+  const [a, b] = await Promise.all([sha256Hex(supplied), sha256Hex(String(env.STATS_PASSWORD))]);
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function statsPage(request, env) {
+  if (!env.STATS_PASSWORD || String(env.STATS_PASSWORD).length < 16) return new Response(null, { status: 404 });
+  const db = env.DB;
+  const now = Math.floor(Date.now() / 1000);
+  const ipHash = (await sha256Hex(request.headers.get('cf-connecting-ip') || 'unknown')).slice(0, 16);
+  const bucket = `stats:${ipHash}`;
+  if (await overLimit(db, bucket, STATS_FAILS, STATS_WINDOW, now)) return new Response(null, { status: 429 });
+  if (!(await statsAuthorised(request, env, db, now))) {
+    await countHit(db, bucket, STATS_WINDOW, now);
+    return new Response(null, { status: 401, headers: { 'www-authenticate': 'Basic realm="stats", charset="UTF-8"' } });
+  }
+  const one = async (sql) => (await db.prepare(sql).first()) || {};
+  const total = await one('SELECT COUNT(DISTINCT site_url) AS sites, COUNT(*) AS comps FROM usage_received');
+  const live = await one(
+    `SELECT COUNT(DISTINCT u.site_url) AS sites, COUNT(*) AS comps FROM usage_received u
+     WHERE EXISTS (SELECT 1 FROM json_each(u.payload,'$.payments') p WHERE json_extract(p.value,'$.sandbox') = 0)`,
+  );
+  const money = (
+    await db
+      .prepare(
+        `SELECT json_extract(u.payload,'$.competition.currency') AS cur,
+                SUM(json_extract(p.value,'$.count')) AS n, SUM(json_extract(p.value,'$.total_cents')) AS t
+         FROM usage_received u, json_each(u.payload,'$.payments') p
+         WHERE json_extract(p.value,'$.sandbox') = 0 GROUP BY 1 ORDER BY 1`,
+      )
+      .all()
+  ).results || [];
+  const recent = (
+    await db
+      .prepare(
+        `SELECT site_url, received_at, json_extract(payload,'$.competition.entry_count') AS entries
+         FROM usage_received ORDER BY received_at DESC, id DESC LIMIT 10`,
+      )
+      .all()
+  ).results || [];
+  const rows = recent.map((r) => `<tr><td>${esc(r.site_url)}</td><td>${esc(r.received_at)}</td><td>${esc(r.entries)}</td></tr>`).join('');
+  const moneyRows = money.map((m) => `<tr><td>${esc(m.cur || '-')}</td><td>${esc(m.n)}</td><td>${esc(m.t)}</td></tr>`).join('');
+  const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>StageRank usage</title>
+<style>body{font-family:system-ui,sans-serif;margin:16px;max-width:720px}h1{font-size:20px}h2{font-size:16px;margin-top:24px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left;font-size:14px;word-break:break-all}.big{font-size:28px;font-weight:600}.note{color:#666;font-size:12px}</style></head><body>
+<h1>StageRank 使用統計 / Usage</h1>
+<p><span class="big">${esc(total.sites || 0)}</span> 個網站 sites · <span class="big">${esc(total.comps || 0)}</span> 場比賽 competitions</p>
+<p>有正式付款 / with live payments：<b>${esc(live.sites || 0)}</b> 個網站 sites、<b>${esc(live.comps || 0)}</b> 場比賽 competitions</p>
+<h2>正式付款匯總 / Live payment totals</h2>
+<table><tr><th>幣別</th><th>筆數</th><th>金額</th></tr>${moneyRows || '<tr><td colspan="3">尚無 / none yet</td></tr>'}</table>
+<p class="note">TWD 為原值；其他幣別為最小單位（例如分）。數字為各網站自報，僅供參考。 / TWD is the face value; other currencies are in minor units. Self-reported, indicative only.</p>
+<h2>最近 10 筆回報 / Latest 10 reports</h2>
+<table><tr><th>網站 site</th><th>時間 UTC</th><th>報名數</th></tr>${rows || '<tr><td colspan="3">尚無 / none yet</td></tr>'}</table>
+</body></html>`;
+  return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+}
+
 export default {
   async fetch(request, env) {
     try {
+      if (request.method === 'GET' && new URL(request.url).pathname === '/stats') return await statsPage(request, env);
       return await handle(request, env);
     } catch {
       // 資料庫暫時出錯：回 503，StageRank 端會稍後重試；不帶任何內部訊息。

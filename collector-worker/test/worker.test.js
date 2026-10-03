@@ -259,3 +259,52 @@ test('認領失敗不會耗掉該網站與全站的額度 / failed claims never 
   assert.equal(rows.length, 0);
   assert.equal((await post(env, report())).status, 200); // 真網站照常 / the real site is unaffected
 });
+
+// ---- 統計頁 / stats page ----
+const PW = 'p'.repeat(24);
+const getStats = (env, auth, ip = '9.9.9.9') =>
+  worker.fetch(new Request('https://x/stats', { headers: { 'cf-connecting-ip': ip, ...(auth ? { authorization: auth } : {}) } }), env);
+const basic = (pw) => 'Basic ' + btoa('me:' + pw);
+
+test('沒設密碼變數，統計頁不存在 / no password variable, no stats page', async () => {
+  const db = fakeD1();
+  assert.equal((await getStats(envOf(db), basic(PW))).status, 404);
+  assert.equal((await getStats(envOf(db, { STATS_PASSWORD: 'short' }), basic('short'))).status, 404);
+});
+
+test('沒密碼或密碼錯回 401，對才給頁面 / no or wrong password is 401, right one gets the page', async () => {
+  const db = fakeD1();
+  const env = envOf(db, { STATS_PASSWORD: PW });
+  assert.equal((await getStats(env)).status, 401);
+  assert.equal((await getStats(env, basic('x'.repeat(24)))).status, 401);
+  const ok = await getStats(env, basic(PW));
+  assert.equal(ok.status, 200);
+  assert.match(ok.headers.get('cache-control'), /no-store/);
+  assert.match(await ok.text(), /StageRank/);
+});
+
+test('統計頁顯示匯總且跳脫 HTML / the page shows totals and escapes HTML', async () => {
+  const db = fakeD1();
+  const env = envOf(db, { STATS_PASSWORD: PW });
+  assert.equal((await post(env, report())).status, 200);
+  db.sqlite.prepare("UPDATE usage_received SET site_url = 'https://a.example/<b>x</b>'").run();
+  const html = await (await getStats(env, basic(PW))).text();
+  assert.match(html, /<span class="big">1<\/span> 個網站/);
+  assert.match(html, /TWD<\/td><td>10<\/td><td>1000/);
+  assert.ok(!html.includes('<b>x</b>'));
+  assert.match(html, /&lt;b&gt;/);
+});
+
+test('猜密碼會被擋下來 / password guessing is throttled', async () => {
+  const db = fakeD1();
+  const env = envOf(db, { STATS_PASSWORD: PW });
+  for (let i = 0; i < 10; i += 1) assert.equal((await getStats(env, basic('y'.repeat(20) + i), '8.8.8.8')).status, 401);
+  assert.equal((await getStats(env, basic(PW), '8.8.8.8')).status, 429);
+  assert.equal((await getStats(env, basic(PW), '7.7.7.7')).status, 200);
+});
+
+test('統計頁不影響收件的 405 / stats does not change the 405 on other GETs', async () => {
+  const db = fakeD1();
+  const res = await worker.fetch(new Request('https://x/', { headers: { 'cf-connecting-ip': '1.1.1.1' } }), envOf(db, { STATS_PASSWORD: PW }));
+  assert.equal(res.status, 405);
+});
